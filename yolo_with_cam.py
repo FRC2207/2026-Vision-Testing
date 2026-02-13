@@ -3,7 +3,7 @@ from ultralytics import YOLO
 import time
 
 def run_detection(video_source: int, model_file_path: str):
-    model = YOLO(model_file_path)
+    model = YOLO(model_file_path, task="detect", verbose=False)
 
     cap = cv2.VideoCapture(video_source)
     if not cap.isOpened():
@@ -18,7 +18,7 @@ def run_detection(video_source: int, model_file_path: str):
         if not success:
             break
 
-        results = model(frame)
+        results = model(frame, verbose=False)
 
         annotated_frame = results[0].plot()
 
@@ -38,4 +38,4 @@ def run_detection(video_source: int, model_file_path: str):
     cv2.destroyAllWindows()
 
 if __name__ == "__main__":
-    run_detection(0, "YoloModels/v26/color-3.1-v26_openvino_model")
+    run_detection(0, "YoloModels/v26/nano/color-3.1-v26.onnx")

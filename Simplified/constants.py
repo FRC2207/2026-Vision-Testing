@@ -8,6 +8,7 @@ DEBUG_MODE = True
 
 # Robot
 STARTING_POSITION = np.array([0, 0])
+DISTANCE_THRESHOLD = 5
 
 # Fuel constants
 BALL_DIAMETER = 6

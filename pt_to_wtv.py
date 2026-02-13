@@ -1,7 +1,7 @@
 from ultralytics import YOLO
 
-model = YOLO("YoloModels/v26/color-3.1-v26.pt", task="detect")
+model = YOLO("YoloModels/v26/nano/colo-3.1-v26.pt", task="detect")
 
-model.export(format="openvino")
+model.export(format="onnx")
 
 print("Model converted to wtv i did")
