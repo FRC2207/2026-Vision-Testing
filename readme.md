@@ -4,3 +4,4 @@ To test path planning, you can run map_creator to create a map with vision from 
 To convert .pt files to wtv extension you want to make it faster run pt_to_wtv.py
 video_feed_broadcaster is to test reading frames over wifi
 camera_calibration will let you get all teh data needed for focal lenght calculations but i avereged several runs to get a better results
+If you want to test the yolo model quickly, run yolo_with_cam.py
