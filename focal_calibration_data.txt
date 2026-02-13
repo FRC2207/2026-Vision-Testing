@@ -1,0 +1,108 @@
+camera = Camera(
+    id=0,
+    camera_fov=74,
+    known_calibration_distance=12.0,
+    ball_d_inches=5.90551,
+    known_calibration_pixel_height=304,
+    yolo_model_file='YoloModels/gray-3.0.pt',
+    grayscale=True,
+    margin=10,
+    min_confidence=0.5
+)
+
+camera = Camera(
+    id=0,
+    camera_fov=74,
+    known_calibration_distance=12.0,
+    ball_d_inches=5.90551,
+    known_calibration_pixel_height=295,
+    yolo_model_file='YoloModels/gray-3.0.pt',
+    grayscale=True,
+    margin=10,
+    min_confidence=0.5
+)
+
+camera = Camera(
+    id=0,
+    camera_fov=74,
+    known_calibration_distance=12.0,
+    ball_d_inches=5.90551,
+    known_calibration_pixel_height=339,
+    yolo_model_file='YoloModels/gray-3.0.pt',
+    grayscale=True,
+    margin=10,
+    min_confidence=0.5
+)
+
+camera = Camera(
+    id=0,
+    camera_fov=74,
+    known_calibration_distance=12.0,
+    ball_d_inches=5.90551,
+    known_calibration_pixel_height=275,
+    yolo_model_file='YoloModels/gray-3.0.pt',
+    grayscale=True,
+    margin=10,
+    min_confidence=0.5
+)
+
+
+camera = Camera(
+    id=0,
+    camera_fov=74,
+    known_calibration_distance=12.0,
+    ball_d_inches=5.90551,
+    known_calibration_pixel_height=281,
+    yolo_model_file='YoloModels/gray-3.0.pt',
+    grayscale=True,
+    margin=10,
+    min_confidence=0.5
+)
+
+camera = Camera(
+    id=0,
+    camera_fov=74,
+    known_calibration_distance=12.0,
+    ball_d_inches=5.90551,
+    known_calibration_pixel_height=282,
+    yolo_model_file='YoloModels/color-3.0.pt',
+    grayscale=True,
+    margin=10,
+    min_confidence=0.5
+)
+
+camera = Camera(
+    id=0,
+    camera_fov=74,
+    known_calibration_distance=12.0,
+    ball_d_inches=5.90551,
+    known_calibration_pixel_height=291,
+    yolo_model_file='YoloModels/color-3.0.pt',
+    grayscale=True,
+    margin=10,
+    min_confidence=0.5
+)
+
+camera = Camera(
+    id=0,
+    camera_fov=74,
+    known_calibration_distance=12.0,
+    ball_d_inches=5.90551,
+    known_calibration_pixel_height=290,
+    yolo_model_file='YoloModels/color-3.0.pt',
+    grayscale=True,
+    margin=10,
+    min_confidence=0.5
+)
+
+camera = Camera(
+    id=0,
+    camera_fov=74,
+    known_calibration_distance=12.0,
+    ball_d_inches=5.90551,
+    known_calibration_pixel_height=276,
+    yolo_model_file='YoloModels/color-3.0.pt',
+    grayscale=True,
+    margin=10,
+    min_confidence=0.5
+)

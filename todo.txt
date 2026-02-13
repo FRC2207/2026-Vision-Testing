@@ -1,0 +1,4 @@
+1. Have "bad areas" to avoid like obstacles
+2. Setup robot detecting code so avoid robots
+
+1. Figure out what to do for balls that are in the air (either code it or make the camera not see stuff in the air)
