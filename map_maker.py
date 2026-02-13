@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import json
 
 class FRCDataCollector:
-    def __init__(self, filename="field_data.json"):
+    def __init__(self, filename="ball_layout.json"):
         self.filename = filename
         self.points = []
         
