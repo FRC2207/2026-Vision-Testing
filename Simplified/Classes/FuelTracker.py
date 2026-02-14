@@ -23,13 +23,19 @@ class FuelTracker:
 
     def update(self, new_fuel_list: list[Fuel]):
         for new_fuel in new_fuel_list:
+            found_match = False
             for fuel in self.fuel_list:
-                if np.linalg.norm(new_fuel.get_position(), fuel) <= self.distance_threshold:
+                distance = np.linalg.norm(new_fuel.get_position() - fuel.get_position())
+                if distance <= self.distance_threshold:
                     new_fuel.set_id(fuel.get_id())
-                else:
-                    new_fuel.set_id(self.get_highest_id())
-
-        self.fuel_list = new_fuel_list
+                    found_match = True
+                    break
+            
+            if not found_match:
+                new_fuel.set_id(self.get_highest_id() + 1)
+                self.fuel_list.append(new_fuel)
+        
+        return self.fuel_list
 
     def set_fuel_list(self, fuels: list[Fuel]):
         self.fuel_list = fuels

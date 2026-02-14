@@ -33,3 +33,4 @@ KNOWN_CALIBRATION_PIXEL_HEIGHT = 334 # This is guestimated from averaging data a
 # YOLO_MODEL_FILE = "YoloModels/v26/color-3.1-v26_openvino_model"
 YOLO_MODEL_FILE = "YoloModels/v8_or_v11/color-3.0_openvino_model"
 GRAYSCALE = False
+NETWORKTABLES_IP = "10.22.7.2" # Pretty sure this is right

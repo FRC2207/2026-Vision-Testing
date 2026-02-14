@@ -5,6 +5,7 @@ from Classes.NetworkTableHandler import NetworkTableHandler
 import time
 import constants
 from Classes.FuelTracker import FuelTracker
+from Classes.Fuel import Fuel
 
 # Camera class
 camera1 = Camera(
@@ -39,47 +40,52 @@ camera4 = Camera(
     debug_mode=constants.DEBUG_MODE,
 )
 
-network_handler = NetworkTableHandler("10.22.7.2") # Pretty sure this is right
+network_handler = NetworkTableHandler(constants.NETWORKTABLES_IP)
 
+def numpy_to_fuel_list(fuel_positions):
+    return [Fuel(p[0], p[1]) for p in fuel_positions]
 
 if __name__ == "__main__":
-    print("[Custom Fuel Intake] Creating simplified loop.")
+    try:
+        print("[Custom Fuel Intake] Creating simplified loop.")
 
-    # Create planner
-    starting_positions = camera1.run()
-    fuel_tracker = FuelTracker(starting_positions, constants.DISTANCE_THRESHOLD)
+        # Create planner
+        starting_positions = camera1.run()
+        fuel_tracker = FuelTracker([Fuel(p[0], p[1]) for p in starting_positions], constants.DISTANCE_THRESHOLD)    
+        planner = PathPlanner(
+            starting_positions, constants.STARTING_POSITION,
+            constants.ELIPSON, constants.MIN_SAMPLES,
+            debug_mode=constants.DEBUG_MODE,
+        )
 
-    planner = PathPlanner(
-        starting_positions, constants.STARTING_POSITION,
-        constants.ELIPSON, constants.MIN_SAMPLES,
-        debug_mode=constants.DEBUG_MODE,
-    )
+        while True:
+            # This update to run multiple cameras its probaly gonna destroy fps
+            fuel_positions1 = numpy_to_fuel_list(camera1.run())
+            fuel_positions2 = numpy_to_fuel_list(camera2.run())
+            fuel_positions3 = numpy_to_fuel_list(camera3.run())
+            fuel_positions4 = numpy_to_fuel_list(camera4.run())
 
-    while True:
-        # This update to run multiple cameras if probaly gonna destroy fps
-        fuel_positions1 = camera1.run()
-        fuel_positions2 = camera2.run()
-        fuel_positions3 = camera3.run()
-        fuel_positions4 = camera4.run()
+            fuel_tracker.set_fuel_list(fuel_positions1)
+            fuel_positions = fuel_tracker.update(fuel_positions2)
+            fuel_positions = fuel_tracker.update(fuel_positions3)
+            fuel_positions = fuel_tracker.update(fuel_positions4)
 
-        fuel_tracker.set_fuel_list(fuel_positions1)
-        fuel_positions = fuel_tracker.update(fuel_positions2)
-        fuel_positions = fuel_tracker.update(fuel_positions3)
-        fuel_positions = fuel_tracker.update(fuel_positions4)
+            start_time = time.perf_counter()
+            vision_end_time = time.perf_counter()
 
-        start_time = time.perf_counter()
-        vision_end_time = time.perf_counter()
+            if len(fuel_positions) == 0:
+                print("[Custom Fuel Intake] No fuel positions detected. Skipping loop iteration.")
+                continue
+            else:
+                print(f"[Custom Fuel Intake] Detected fuels: {len(fuel_positions)}")
 
-        if len(fuel_positions) == 0:
-            print("[Custom Fuel Intake] No fuel positions detected. Skipping loop iteration.")
-            continue
-        else:
-            print(f"[Custom Fuel Intake] Detected fuels: {len(fuel_positions)}")
+            _, fuel_positions = planner.update_fuel_positions(fuel_positions)
+            network_handler.send_data(fuel_positions, "fuel_data", "yolo_data")
 
-        _, fuel_positions = planner.update_fuel_positions(fuel_positions)
-        network_handler.send_data(fuel_positions, "fuel_data", "yolo_data")
-
-        end_time = time.perf_counter()
-        print(f"[Custom Fuel Intake] Vision time: {vision_end_time - start_time}. Loop time: {end_time - start_time}")
-
-    # camera.destroy()
+            end_time = time.perf_counter()
+            print(f"[Custom Fuel Intake] Vision time: {vision_end_time - start_time}. Loop time: {end_time - start_time}")
+    finally:
+        camera1.destroy()
+        camera2.destroy()
+        camera3.destroy()
+        camera4.destroy()

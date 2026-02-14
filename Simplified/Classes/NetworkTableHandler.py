@@ -1,28 +1,31 @@
 from networktables import NetworkTables
 import time
+import numpy as np
 
 class NetworkTableHandler:
     def __init__(self, ip: str):
         self.ip = ip
-        # NetworkTables.initialize(server=self.ip)
+        NetworkTables.initialize(server=self.ip)
 
-        # self.connected = False
+        self.connected = False
 
-        # # Wait for a connection (optional, but recommended)
-        # while not NetworkTables.isConnected():
-        #     time.sleep(0.1)
-        # self.connected = True
+        # Wait for a connection (optional, but recommended)
+        while not NetworkTables.isConnected():
+            time.sleep(0.1)
+        self.connected = True
 
-    def send_data(self, data: int|str|bool, data_name: str, table_name: str):
-        # table = NetworkTables.getTable(table_name)
-        # while True:
-        #     try:
-        #         if type(data) == int:
-        #             table.putNumber(data_name, data)
-        #         elif type(data) == str:
-        #             table.putString(data_name, data)
-        #         else:
-        #             table.putBoolean(data_name, data)
-        #     except KeyboardInterrupt:
-        #         break
-        pass
+    def send_data(self, data, data_name: str, table_name: str):
+        try:
+            table = NetworkTables.getTable(table_name)
+            if isinstance(data, (list, np.ndarray)):
+                # Convert to list of floats
+                data_list = [float(x) for sublist in data for x in sublist] if isinstance(data, np.ndarray) else data
+                table.putNumberArray(data_name, data_list)
+            elif isinstance(data, (int, float)):
+                table.putNumber(data_name, data)
+            elif isinstance(data, str):
+                table.putString(data_name, data)
+            else:
+                table.putBoolean(data_name, data)
+        except Exception as e:
+            print(f"[NetworkTables Error] {e}")
