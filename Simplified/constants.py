@@ -1,6 +1,7 @@
 import numpy as np
 
 DEBUG_MODE = True
+APP_MODE = True
 
 #######################################################################
 # Custom PathPlanner Stuff

@@ -4,6 +4,8 @@ from Classes.PathPlanner import PathPlanner
 from Classes.NetworkTableHandler import NetworkTableHandler
 import time
 import constants
+from Classes.CameraApp import CameraApp
+import threading
 
 # Camera class
 camera = Camera(
@@ -13,6 +15,10 @@ camera = Camera(
     constants.YOLO_MODEL_FILE, 10, 1, grayscale=constants.GRAYSCALE,
     debug_mode=constants.DEBUG_MODE,
 )
+
+if constants.APP_MODE:
+    camera_app = CameraApp()
+    threading.Thread(target=camera_app.run, daemon=True).start()
 
 network_handler = NetworkTableHandler(constants.NETWORKTABLES_IP)
 
@@ -42,6 +48,8 @@ if __name__ == "__main__":
             else:
                 print(f"[Custom Fuel Intake] Detected fuels: {len(fuel_positions)}")
 
+            if constants.APP_MODE:
+                camera_app.set_frame(camera.get_frame())
             _, fuel_positions = planner.update_fuel_positions(fuel_positions)
             network_handler.send_data(fuel_positions, "fuel_data", "yolo_data")
 
