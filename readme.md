@@ -11,6 +11,7 @@ So everything needs a little cleanup and stuff but the simplfied folder should b
 - **map_creator.py**: Uses the vision model and some math or wtv to make a birdseye veiw of the image file (in Images directory)
 - **camera_calibration.py**: This file is used for calculating the constants needed for focal length smth. Run the file, enter the paramters, hold the fuel a certain distance away and enter the other paramters then it will give you some values. Paste that into focal_calibration_data.txt for averaging. Average the "known_calibration_pixel_height" value and make sure when creating the camera you set the correct distance
 - **livestream_reader.py**: Create a Camera object and reads form a livestream
+- **onnx_to_rknn.py**: This file almost made me break my comptuer in frustration. Took 2 hours to setup but finally I got a .rknn file from my linux server, I just hope I set the paramters correct.
 
 ## Folders
 
