@@ -1,0 +1,13 @@
+opencv-python
+ultralytics
+torch
+torchvision
+numpy
+scipy
+scikit-learn
+matplotlib
+requests
+flask
+pynetworktables
+pygame
+Pillow
