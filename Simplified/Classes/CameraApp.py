@@ -43,5 +43,5 @@ class CameraApp:
         </html>
         """
     
-    def run(self, host='0.0.0.0', port=5000, debug=True):
-        self.app.run(host=host, port=port, debug=debug)
+    def run(self, host='0.0.0.0', port=5000, debug=False, use_reloader=False):
+        self.app.run(host=host, port=port, debug=debug, use_reloader=False)
