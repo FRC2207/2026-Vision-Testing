@@ -9,9 +9,16 @@ class NetworkTableHandler:
 
         self.connected = False
 
+        print("[Custom PathPlanner] Initializing NetworkTables connection...")
         # Wait for a connection (optional, but recommended)
+        i = 0
         while not NetworkTables.isConnected():
             time.sleep(0.1)
+            i += 1
+
+            if (i > 60):  # Wait for 60 seconds max
+                print("[Custom PathPlanner] Warning: NetworkTables connection timed out after 60 seconds.")
+                break
         self.connected = True
 
     def send_data(self, data, data_name: str, table_name: str):
