@@ -28,7 +28,7 @@ class YoloWrapper:
             if ret != 0:
                 raise ValueError(f"Failed to build RKNN model: {self.model_file}")
             
-            ret = self.model.init_runtime(target="rk3588s")
+            ret = self.model.init_runtime(target="rk3588")
             if ret != 0:
                 raise ValueError(f"Failed to initialize RKNN runtime for model: {self.model_file}")
         elif model_file.endswith(".onnx") or model_file.endswith(".pt"):
