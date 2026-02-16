@@ -49,7 +49,8 @@ if __name__ == "__main__":
                 print(f"[Custom Fuel Intake] Detected fuels: {len(fuel_positions)}")
 
             if constants.APP_MODE:
-                camera_app.set_frame(camera.get_frame())
+                _, frame = camera.get_yolo_data()
+                camera_app.set_frame(frame)
             _, fuel_positions = planner.update_fuel_positions(fuel_positions)
             network_handler.send_data(fuel_positions, "fuel_data", "yolo_data")
 

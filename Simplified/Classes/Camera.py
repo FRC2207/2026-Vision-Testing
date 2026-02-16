@@ -3,6 +3,7 @@ import math
 import numpy as np
 from ultralytics import YOLO
 import time
+import os
 
 try:
     from rknn.api import RKNN
@@ -107,6 +108,7 @@ class Camera:
 
         self.camera_angle = camera_angle
         self.camera_height = camera_height
+        self.gui_available = "DISPLAY" in os.environ and os.environ["DISPLAY"]
 
         self.debug_mode = debug_mode
         self.last_time = time.perf_counter()
@@ -149,10 +151,11 @@ class Camera:
             fps_text = f'FPS: {int(fps)}'
             cv2.putText(annotated_frame, fps_text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
 
-            cv2.imshow("YOLO Detections", annotated_frame)
-            cv2.waitKey(1)
+            if self.gui_available: # Fixes a really anooying error I had
+                cv2.imshow("YOLO Detections", annotated_frame)
+                cv2.waitKey(1)
 
-        return results
+        return results, annotated_frame if annotated_frame is not None else frame
 
     def run(self):
         data = self.get_yolo_data()
