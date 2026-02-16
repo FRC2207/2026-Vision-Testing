@@ -158,7 +158,7 @@ class Camera:
         return results, annotated_frame if annotated_frame is not None else frame
 
     def run(self):
-        data = self.get_yolo_data()
+        data, frame = self.get_yolo_data()
         img_h, img_w = data.orig_shape[:2]
 
         map_points = []
