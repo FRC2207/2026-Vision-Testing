@@ -71,3 +71,4 @@ Contains all the yolo vision models and other file (like .onnx) should be genera
 - **Username**: ubuntu
 - **Password**: 2207vision
 - **Auto-scheduler-function**: crontab -e
+- **Clone-Repo**: git clone git@github.com:FRC2207/2026-Vision-Testing.git

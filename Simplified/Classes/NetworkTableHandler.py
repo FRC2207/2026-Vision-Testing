@@ -17,7 +17,7 @@ class NetworkTableHandler:
             i += 1
 
             if (i > 60):  # Wait for 60 seconds max
-                print("[Custom PathPlanner] Warning: NetworkTables connection timed out after 60 seconds.")
+                print("[Custom PathPlanner] Warning: NetworkTables connection timed out after 6 seconds.")
                 self.connected = False
                 break
 

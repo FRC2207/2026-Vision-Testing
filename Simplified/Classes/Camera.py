@@ -4,6 +4,79 @@ import numpy as np
 from ultralytics import YOLO
 import time
 
+try:
+    from rknn.api import RKNNLite
+except ImportError:
+    RKNNLite = None
+
+class YoloWrapper:
+    def __init__(self, model_file: str, input_size=(640, 640)):
+        self.model_file = model_file
+        self.input_size = input_size
+        self.model_type = None
+
+        if model_file.endswith(".rknn"):
+            if RKNNLite is None:
+                raise ImportError("Could node import RKNNLite. This could be because you meant to run a .pt or .onnx on a laptop, but if its the pi ur cooked.")
+            self.model_type = "rknn"
+            self.model = RKNNLite()
+            ret = self.model.load_rknn(self.model_file)
+            if ret != 0:
+                raise ValueError(f"Failed to load RKNN model: {self.model_file}")
+            ret = self.model.init_runtime()
+            if ret != 0:
+                raise ValueError(f"Failed to initialize RKNN runtime for model: {self.model_file}")
+        elif model_file.endswith(".onnx") or model_file.endswith(".pt"):
+            self.model_type = "yolo"
+            self.model = YOLO(self.model_file, verbose=False, task="detect")
+        else:
+            raise ValueError(f"Unsupported model file type: {self.model_file}")
+        
+    def predict(self, frame):
+        if self.model_type == "rknn":
+            img = cv2.resize(frame, self.input_size)
+            img = img.astype(np.float32) / 255.0
+            img = np.expand_dims(img, axis=0)
+            outputs = self.model.inference(inputs=[img])[0]
+
+            return self._convert_rknn_outputs(outputs, frame.shape)
+        elif self.model_type == "yolo":
+            results = self.model(frame, verbose=False)[0]
+            return results
+        else:
+            raise ValueError(f"Unsupported model type: {self.model_type}. This should never happen.")
+        
+    def _convert_rknn_outputs(self, outputs, orig_shape):
+        # I think the _ means like private method but im guessing at this point
+        # Hopefully this will make it so that I don't have to chane the rest of the code to work with wtv rknn files output
+        class Boxes:
+            def __init__(self, xyxy, conf):
+                self.xyxy = xyxy
+                self.conf = conf
+
+        class Results:
+            class BoxesInner:
+                def __init__(self, xyxy, conf):
+                    self.xyxy = xyxy
+                    self.conf = conf
+            def __init__(self, xyxy, conf, orig_shape):
+                self.boxes = Boxes(xyxy, conf)
+                self.orig_shape = orig_shape
+
+        if len(outputs.shape) == 1:
+            outputs = np.expand_dims(outputs, axis=0)
+
+        xyxy_list = [list(map(float, box[:4])) for box in outputs]
+        conf_list = [float(box[4]) for box in outputs]
+
+        xyxy_array = np.array(xyxy_list)
+        conf_array = np.array(conf_list)
+        return Results(xyxy_array, conf_array, orig_shape)
+
+    def release(self):
+        if self.model_type == "rknn":
+            self.model.release()
+
 class Camera:
     def __init__(self, source: int|str, camera_fov: int, known_calibration_distance: int, ball_d_inches: int, known_calibration_pixel_height: int, yolo_model_file: str, camera_angle: float, camera_height: int, grayscale: bool=True, margin: int=10, min_confidence: float=0.5, debug_mode: bool=False):
         self.source = source
@@ -32,7 +105,7 @@ class Camera:
 
         self.focal_length_pixels = (self.known_calibration_pixel_height * self.known_calibration_distance) / self.ball_d_inches
 
-        self.model = YOLO(self.yolo_model_file, verbose=False, task="detect")
+        self.model = YoloWrapper(self.yolo_model_file, verbose=False, task="detect")
 
     def get_frame(self):
         ret, frame = self.cap.read()
@@ -48,7 +121,7 @@ class Camera:
         if self.grayscale:
             frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
 
-        results = self.model(frame, verbose=False)[0]
+        results = self.model.predict(frame)
 
         # Show it with cv2
         if self.debug_mode:
