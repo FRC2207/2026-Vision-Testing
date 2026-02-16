@@ -23,7 +23,7 @@ class YoloWrapper:
             ret = self.model.load_rknn(self.model_file)
             if ret != 0:
                 raise ValueError(f"Failed to load RKNN model: {self.model_file}")
-            ret = self.rknn.build(do_quantization=False)
+            ret = self.model.build(do_quantization=False)
             
             if ret != 0:
                 raise ValueError(f"Failed to build RKNN model: {self.model_file}")
