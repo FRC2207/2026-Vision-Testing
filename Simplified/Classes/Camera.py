@@ -105,7 +105,7 @@ class Camera:
 
         self.focal_length_pixels = (self.known_calibration_pixel_height * self.known_calibration_distance) / self.ball_d_inches
 
-        self.model = YoloWrapper(self.yolo_model_file, verbose=False, task="detect")
+        self.model = YoloWrapper(self.yolo_model_file)
 
     def get_frame(self):
         ret, frame = self.cap.read()
