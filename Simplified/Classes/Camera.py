@@ -140,7 +140,7 @@ class Camera:
 
         # Show it with cv2
         if self.debug_mode:
-            annotated_frame = results.plot()
+            annotated_frame = results.plot(frame)
             new_time_frame = time.perf_counter()
             fps = 1 / (new_time_frame - self.last_time)
             self.last_time = new_time_frame
