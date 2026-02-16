@@ -70,15 +70,14 @@ class YoloWrapper:
                 self.boxes = Boxes(xyxy, conf)
                 self.orig_shape = orig_shape
 
-        if len(outputs.shape) == 1:
-            outputs = np.expand_dims(outputs, axis=0)
+        outputs = np.array(outputs)
+        if len(outputs.shape) == 3: # Prolly (1, N, 6) where N is number of detections and 6 is x1, y1, x2, y2, conf, class. I hate array dimension stuff so much
+            outputs = outputs[0]
 
         xyxy_list = [list(map(float, box[:4])) for box in outputs]
         conf_list = [float(box[4]) for box in outputs]
 
-        xyxy_array = np.array(xyxy_list)
-        conf_array = np.array(conf_list)
-        return Results(xyxy_array, conf_array, orig_shape)
+        return Results(np.array(xyxy_list), np.array(conf_list), orig_shape)
 
     def release(self):
         if self.model_type == "rknn":
