@@ -45,12 +45,10 @@ print(f"[INFO] Input shape: {input_shape}, Channels: {n_channels}, Format: {data
 # Step 2: Initialize RKNN
 print("[2/4] Initializing RKNN Toolkit...")
 rknn = RKNN(verbose=True)
-target_platform = "rk3588" if is_arm() else "rk3588"
 
 rknn.config(
     mean_values=[[0]*n_channels],
     std_values=[[255]*n_channels],
-    target_platform=target_platform,
     optimization_level=3,
     channel_swap="RGB" if n_channels == 3 else None
 )
