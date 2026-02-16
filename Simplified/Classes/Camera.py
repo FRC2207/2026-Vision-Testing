@@ -5,9 +5,9 @@ from ultralytics import YOLO
 import time
 
 try:
-    from rknn.api import RKNNLite
+    from rknn.api import RKNN
 except ImportError:
-    RKNNLite = None
+    RKNN = None
 
 class YoloWrapper:
     def __init__(self, model_file: str, input_size=(640, 640)):
@@ -16,10 +16,10 @@ class YoloWrapper:
         self.model_type = None
 
         if model_file.endswith(".rknn"):
-            if RKNNLite is None:
+            if RKNN is None:
                 raise ImportError("Could node import RKNNLite. This could be because you meant to run a .pt or .onnx on a laptop, but if its the pi ur cooked.")
             self.model_type = "rknn"
-            self.model = RKNNLite()
+            self.model = RKNN()
             ret = self.model.load_rknn(self.model_file)
             if ret != 0:
                 raise ValueError(f"Failed to load RKNN model: {self.model_file}")
