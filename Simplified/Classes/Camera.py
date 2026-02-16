@@ -63,13 +63,22 @@ class YoloWrapper:
 
         class Results:
             class BoxesInner:
-                def __init__(self, xyxy, conf):
+                def __init__(self, xyxy, conf, frame):
                     self.xyxy = xyxy
                     self.conf = conf
+                    self.frame = frame
+
             def __init__(self, xyxy, conf, orig_shape):
                 self.boxes = Boxes(xyxy, conf)
                 self.orig_shape = orig_shape
 
+            def plot(self, frame):
+                # Custom plotting thingie since rknn doesnt have built in plottin like ultralytics
+                for box in self.boxes.xyxy:
+                    x1, y1, x2, y2 = map(int, box)
+                    cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                return frame
+            
         outputs = np.array(outputs)
         if len(outputs.shape) == 3: # Prolly (1, N, 6) where N is number of detections and 6 is x1, y1, x2, y2, conf, class. I hate array dimension stuff so much
             outputs = outputs[0]
