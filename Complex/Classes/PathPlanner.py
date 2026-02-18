@@ -220,9 +220,7 @@ class PathPlanner:
         return np.array(poses)
     
     def get_path_for_network_tabels(self):
-        nn_path = self.nearest_neighbor_path()
-
-        
+        nn_path = self.nearest_neighbor_path()        
 
     def handle_outlier_points_and_obstacles(self, points: list) -> list:
         safe_point = np.ones(len(points), dtype=bool)

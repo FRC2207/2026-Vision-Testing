@@ -4,6 +4,7 @@ import numpy as np
 from ultralytics import YOLO
 import time
 import os
+import logging
 
 try:
     from rknn.api import RKNN
@@ -16,13 +17,17 @@ class YoloWrapper:
         self.input_size = input_size
         self.model_type = None
 
+        self.logger = logging.getLogger(__name__)
+
         if model_file.endswith(".rknn"):
             if RKNN is None:
+                self.logger.error("Could node import RKNNLite. This could be because you meant to run a .pt or .onnx on a laptop, but if its the pi ur cooked.")
                 raise ImportError("Could node import RKNNLite. This could be because you meant to run a .pt or .onnx on a laptop, but if its the pi ur cooked.")
             self.model_type = "rknn"
             self.model = RKNN()
             ret = self.model.load_rknn(self.model_file)
             if ret != 0:
+                self.logger.error(f"Failed to load RKNN model: {self.model_file}")
                 raise ValueError(f"Failed to load RKNN model: {self.model_file}")
             
             # Already built if .rknn file so skip
@@ -33,12 +38,14 @@ class YoloWrapper:
             
             ret = self.model.init_runtime(target="rk3588")
             if ret != 0:
+                self.logger.error(f"Failed to initialize RKNN runtime for model: {self.model_file}")
                 raise ValueError(f"Failed to initialize RKNN runtime for model: {self.model_file}")
         elif model_file.endswith(".onnx") or model_file.endswith(".pt"):
             self.model_type = "yolo"
             self.model = YOLO(self.model_file, verbose=False, task="detect")
         else:
-            raise ValueError(f"Unsupported model file type: {self.model_file}")
+            self.logger.error(f"Unsupported model file type: {self.model_file}. Check constants and spelling blud.")
+            raise ValueError(f"Unsupported model file type: {self.model_file}. Check constants and spelling blud.")
         
     def predict(self, frame):
         if self.model_type == "rknn":
@@ -52,7 +59,8 @@ class YoloWrapper:
             results = self.model(frame, verbose=False)[0]
             return results
         else:
-            raise ValueError(f"Unsupported model type: {self.model_type}. This should never happen.")
+            self.logger.error(f"Unsupported model type: {self.model_type}. This should never happen, you broke the matrix.")
+            raise ValueError(f"Unsupported model type: {self.model_type}. This should never happen, you broke the matrix.")
         
     def _convert_rknn_outputs(self, outputs, orig_shape):
         # I think the _ means like private method but im guessing at this point
@@ -118,6 +126,7 @@ class Camera:
         # time.sleep(0.5)
 
         if not self.cap.isOpened():
+            self.logger.error(f"Cannot open source {self.source}")
             raise ValueError(f"Cannot open source {self.source}")
 
         self.focal_length_pixels = (self.known_calibration_pixel_height * self.known_calibration_distance) / self.ball_d_inches
@@ -127,7 +136,8 @@ class Camera:
     def get_frame(self):
         ret, frame = self.cap.read()
         if not ret:
-            raise ValueError(f"Failed to retrieve frame from : {self.source}")
+            self.logger.erro(f"Failed to retrieve frame from: {self.source}")
+            raise ValueError(f"Failed to retrieve frame from: {self.source}")
         if self.grayscale:
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         return frame

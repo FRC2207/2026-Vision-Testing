@@ -6,6 +6,16 @@ import time
 import constants
 from Classes.FuelTracker import FuelTracker
 from Classes.Fuel import Fuel
+import logging
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    filemode="w", # Append dont overwrite
+    filename="log.txt"
+)
+
+logger = logging.getLogger(__name__)
 
 # Camera class
 camera1 = Camera(
@@ -47,7 +57,7 @@ def numpy_to_fuel_list(fuel_positions):
 
 if __name__ == "__main__":
     try:
-        print("[Custom Fuel Intake] Creating simplified loop.")
+        logger.info("Creating simplified loop.")
 
         # Create planner
         starting_positions = camera1.run()
@@ -74,16 +84,16 @@ if __name__ == "__main__":
             vision_end_time = time.perf_counter()
 
             if len(fuel_positions) == 0:
-                print("[Custom Fuel Intake] No fuel positions detected. Skipping loop iteration.")
+                logger.info(f"No fuel positions detected. Skipping loop iteration.")
                 continue
             else:
-                print(f"[Custom Fuel Intake] Detected fuels: {len(fuel_positions)}")
+                logger.info(f"Detected fuels: {len(fuel_positions)}")
 
-            _, fuel_positions = planner.update_fuel_positions(fuel_positions)
-            network_handler.send_data(fuel_positions, "fuel_data", "yolo_data")
+            noise_positions, raw_path, smooth_path = planner.update_fuel_positions(fuel_positions)
+            network_handler.send_data(smooth_path, "smooth_path", "yolo_data")
 
             end_time = time.perf_counter()
-            print(f"[Custom Fuel Intake] Vision time: {vision_end_time - start_time}. Loop time: {end_time - start_time}")
+            logger.info(f"Vision time: {vision_end_time - start_time}. Loop time: {end_time - start_time}")
     finally:
         camera1.destroy()
         camera2.destroy()

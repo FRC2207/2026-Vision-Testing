@@ -34,7 +34,7 @@ network_handler = NetworkTableHandler(constants.NETWORKTABLES_IP)
 
 if __name__ == "__main__":
     try:
-        logger.info("Starting simplified loop.")
+        logger.info("Starting complex loop.")
 
         # Create planner
         try:
@@ -61,8 +61,8 @@ if __name__ == "__main__":
             if constants.APP_MODE:
                 _, frame = camera.get_yolo_data()
                 camera_app.set_frame(frame)
-            _, fuel_positions = planner.update_fuel_positions(fuel_positions)
-            network_handler.send_data(fuel_positions, "fuel_data", "yolo_data")
+            noise_positions, raw_path, smooth_path = planner.update_fuel_positions(fuel_positions)
+            network_handler.send_data(smooth_path, "smooth_path", "yolo_data")
 
             end_time = time.perf_counter()
             logger.info(f"Vision time: {vision_end_time - start_time}. Loop time: {end_time - start_time}")

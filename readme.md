@@ -2,7 +2,7 @@
 
 So everything needs a little cleanup and stuff but the simplfied folder should be the files that just sends the detected fuel data points over network tables. The complex folder does a lot more like plot the path and sends the path over network tables.
 
-## Files
+### Utilities
 
 - **video_feed_broadcaster.py**: Sets up a custom Flask app to make a website with the camera livestream
 - **yolo_with_cam.py**: Runs the set YOLO vision model on a camera (defualt id is 0)
@@ -67,8 +67,21 @@ Contains all the yolo vision models and other file (like .onnx) should be genera
 
 ## Orange Pi 5 Info
 
-- **IP**: 10.22.7.200
-- **Username**: ubuntu
-- **Password**: 2207vision
-- **Auto-scheduler-function**: crontab -e
-- **Clone-Repo**: git clone git@github.com:FRC2207/2026-Vision-Testing.git
+- IP: **10.22.7.200**
+- Username: **ubuntu**
+- Password: **2207vision**
+- Auto-scheduler-function: ```bach crontab -e```
+- Clone-Repo: ```bash git clone git@github.com:FRC2207/2026-Vision-Testing.git ```
+
+Learning all this readme.md formatting was actually kinda fund for some reason
+
+# Table thingie that took me a long time and prolly shows why this isnt super realistic
+| Model | Size | Latency | Estimated FPS |
+|:------|:----:|:-------:|--------------:|
+|Yolov26|nano  |~99.5    |~10            |
+|Yolov11|nano  |71.5     |~14            |
+|Yolov11|small |98.9     |~10            |
+|Yolov11|medium|235.3    |~4             |
+|Yolov8 |nano  |~20-30   |~30-50         |
+|Yolov8 |small |~40-60   |~15-25         |
+|Yolov5 |nano  |~15-25   |~40-60         |
