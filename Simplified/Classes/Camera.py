@@ -5,11 +5,29 @@ from ultralytics import YOLO
 import time
 import os
 import logging
+import sys
 
 try:
     from rknn.api import RKNN
 except ImportError:
     RKNN = None
+
+class Box:
+    def __init__(self, xyxy, conf):
+        self.xyxy = xyxy
+        self.conf = conf
+
+class Results:
+    def __init__(self, boxes: list[Box], orig_shape):
+        self.boxes = boxes
+        self.orig_shape = orig_shape
+
+    def plot(self, frame):
+        # Custom plotting thingie since rknn doesnt have built in plottin like ultralytics
+        for box in self.boxes:
+            x1, y1, x2, y2 = map(int, box.xyxy)
+            cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+        return frame
 
 class YoloWrapper:
     def __init__(self, model_file: str, input_size=(640, 640)):
@@ -47,7 +65,7 @@ class YoloWrapper:
             self.logger.error(f"Unsupported model file type: {self.model_file}. Check constants and spelling blud.")
             raise ValueError(f"Unsupported model file type: {self.model_file}. Check constants and spelling blud.")
         
-    def predict(self, frame):
+    def predict(self, frame) -> Results:
         if self.model_type == "rknn":
             img = cv2.resize(frame, self.input_size)
             img = img.astype(np.float32) / 255.0
@@ -57,52 +75,36 @@ class YoloWrapper:
             return self._convert_rknn_outputs(outputs, frame.shape)
         elif self.model_type == "yolo":
             results = self.model(frame, verbose=False)[0]
-            return results
+
+            return self._convert_ultralytics_to_results(results)
         else:
             self.logger.error(f"Unsupported model type: {self.model_type}. This should never happen, you broke the matrix.")
             raise ValueError(f"Unsupported model type: {self.model_type}. This should never happen, you broke the matrix.")
-        
+    
+    def _convert_ultralytics_to_results(self, results):
+        boxes = [Box(list(map(float, box[:4])), float(conf)) 
+                 for box, conf in zip(results.boxes.xyxy, results.boxes.conf)]
+        return Results(boxes, results.orig_shape)
+
     def _convert_rknn_outputs(self, outputs, orig_shape):
         # I think the _ means like private method but im guessing at this point
         # Hopefully this will make it so that I don't have to chane the rest of the code to work with wtv rknn files output
-        class Boxes:
-            def __init__(self, xyxy, conf):
-                self.xyxy = xyxy
-                self.conf = conf
-
-        class Results:
-            class BoxesInner:
-                def __init__(self, xyxy, conf, frame):
-                    self.xyxy = xyxy
-                    self.conf = conf
-                    self.frame = frame
-
-            def __init__(self, xyxy, conf, orig_shape):
-                self.boxes = Boxes(xyxy, conf)
-                self.orig_shape = orig_shape
-
-            def plot(self, frame):
-                # Custom plotting thingie since rknn doesnt have built in plottin like ultralytics
-                for box in self.boxes.xyxy:
-                    x1, y1, x2, y2 = map(int, box)
-                    cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
-                return frame
-            
         outputs = np.array(outputs)
         if len(outputs.shape) == 3: # Prolly (1, N, 6) where N is number of detections and 6 is x1, y1, x2, y2, conf, class. I hate array dimension stuff so much
             outputs = outputs[0]
 
-        xyxy_list = [list(map(float, box[:4])) for box in outputs]
-        conf_list = [float(box[4]) for box in outputs]
-
-        return Results(np.array(xyxy_list), np.array(conf_list), orig_shape)
+        boxes = [Box(list(map(float, box[:4])), float(box[4])) for box in outputs]
+        
+        return Results(boxes, orig_shape)
 
     def release(self):
         if self.model_type == "rknn":
             self.model.release()
 
 class Camera:
-    def __init__(self, source: int|str, camera_fov: int, known_calibration_distance: int, ball_d_inches: int, known_calibration_pixel_height: int, yolo_model_file: str, camera_angle: float, camera_height: int, grayscale: bool=True, margin: int=10, min_confidence: float=0.5, debug_mode: bool=False):
+    def __init__(self, source: int|str, camera_fov: int, known_calibration_distance: int, ball_d_inches: int, known_calibration_pixel_height: int, yolo_model_file: str,
+                 camera_downward_angle: float, camera_bot_relative_angle: float ,camera_height: int, camera_x: int, camera_y: int,
+                 grayscale: bool=True, margin: int=10, min_confidence: float=0.5, debug_mode: bool=False):
         self.source = source
         self.camera_fov = camera_fov
         self.known_calibration_distance = known_calibration_distance
@@ -114,11 +116,19 @@ class Camera:
         self.grayscale = grayscale
         self.yolo_model_file = yolo_model_file
 
-        self.camera_angle = camera_angle
+        # Camera transform stuff
+        self.camera_pitch_angle = camera_downward_angle
         self.camera_height = camera_height
-        self.gui_available = "DISPLAY" in os.environ and os.environ["DISPLAY"]
+        self.camera_x = camera_x
+        self.camera_y = camera_y
+        self.camera_bot_relative_yaw = camera_bot_relative_angle
 
         self.debug_mode = debug_mode
+        
+        self.gui_available = True
+        self.logger = logging.getLogger(__name__)
+        self.logger.info(f"Camera object created with: {self.__dict__}")
+
         self.last_time = time.perf_counter()
 
         self.cap = cv2.VideoCapture(self.source)
@@ -150,6 +160,8 @@ class Camera:
 
         results = self.model.predict(frame)
 
+        annotated_frame = frame.copy()
+        
         # Show it with cv2
         if self.debug_mode:
             annotated_frame = results.plot(frame)
@@ -165,7 +177,7 @@ class Camera:
                 cv2.imshow("YOLO Detections", annotated_frame)
                 cv2.waitKey(1)
 
-        return results, annotated_frame if annotated_frame is not None else frame
+        return results, annotated_frame
 
     def run(self):
         data, frame = self.get_yolo_data()
@@ -174,44 +186,83 @@ class Camera:
         map_points = []
         confidence_list = []
 
-        for i, box in enumerate(data.boxes.xyxy):
-            x1, y1, x2, y2 = box.tolist()
-
-            conf = float(data.boxes.conf[i].item())
+        for box in data.boxes:
+            x1, y1, x2, y2 = box.xyxy
+            conf = box.conf
 
             if (conf < self.min_confidence):
                 continue
-            # Skip boxes too close to left/top/right edges hopefully allowing bottem edge
             if x1 < self.margin or y1 < self.margin or x2 > (img_w - self.margin):
                 continue
 
             confidence_list.append(conf)
-            
-            cx = (x1 + x2) / 2
-            cy = (y1 + y2) / 2
+
+            cx = (x1 + x2) / 2.0
+            cy = (y1 + y2) / 2.0
+
             w_pixels = x2 - x1
             h_pixels = y2 - y1
-            avg_pixels = (w_pixels + h_pixels) / 2
-            distance = (self.ball_d_inches * self.focal_length_pixels) / avg_pixels
-            
-            dx_pixels = cx - (img_w / 2)
-            angle_rad = math.radians(self.camera_fov) * (dx_pixels / img_w)
-            
-            X = math.tan(angle_rad) * distance
-            Y = distance
+            avg_pixels = (w_pixels + h_pixels) / 2.0
+            if avg_pixels <= 0:
+                continue
 
-            X, Y = self.apply_camera_transformations(X, Y)
-            
-            map_points.append([X, Y])
-        
+            distance_los = (self.ball_d_inches * self.focal_length_pixels) / avg_pixels
+
+            pt = self.apply_camera_transformations(cx, cy, img_w, img_h, distance_los)
+            if pt is None:
+                continue
+
+            map_points.append([pt[0], pt[1]])
+
         return np.array(map_points) if map_points else np.empty((0, 2))
-    
-    def apply_camera_transformations(self, X, Y):
-        # Fancy math, but it came from stack overflow and it calulates the real world X and Y coordinates based on the camera angle and height
-        ground_distance = self.camera_height / math.cos(math.radians(self.camera_angle))
-        Y += ground_distance * math.cos(math.radians(self.camera_angle))
-        return X, Y
 
+    def apply_camera_transformations(self, cx_pixel, cy_pixel, img_w, img_h, distance_los):
+        cx0 = img_w / 2.0
+        cy0 = img_h / 2.0
+        f = self.focal_length_pixels
+
+        dx = cx_pixel - cx0
+        dy = cy_pixel - cy0
+
+        alpha = math.atan2(dx, f)
+        beta = math.atan2(dy, f)
+
+        # The pitch angle shifts what we consider "center" vertically
+        pitch_rad = math.radians(self.camera_pitch_angle)
+        
+        # The vertical angle relative to the camera's optical axis (not relative to horizontal)
+        # This is just the angle from the image center to the object
+        vertical_angle_from_center = beta
+        
+        # Decompose line-of-sight distance into components
+        # The line-of-sight distance is calculated from bounding box size
+        # We decompose it based on the angles from image center
+        local_x = distance_los * math.cos(vertical_angle_from_center) * math.cos(alpha)
+        local_y = distance_los * math.cos(vertical_angle_from_center) * math.sin(alpha)
+
+        yaw_rad = math.radians(self.camera_bot_relative_yaw)
+        rot_x = (local_x * math.cos(yaw_rad)) - (local_y * math.sin(yaw_rad))
+        rot_y = (local_x * math.sin(yaw_rad)) + (local_y * math.cos(yaw_rad))
+
+        robot_rel_x = rot_x + self.camera_x
+        robot_rel_y = rot_y + self.camera_y
+
+        return robot_rel_x, robot_rel_y
+        
+    def to_field_relative(self, rel_x, rel_y, robot_x, robot_y, robot_heading):
+        # this wont work or smth im tweaking just dont use it but keep it here
+        # robot_heading should be in degrees i think
+        # 0 rad = facing down the field positve y
+        # Positive = rotating towards the right.
+
+        f_x = (rel_x * math.cos(robot_heading)) - (rel_y * math.sin(robot_heading))
+        f_y = (rel_x * math.sin(robot_heading)) + (rel_y * math.cos(robot_heading))
+
+        field_x = f_x + robot_x
+        field_y = f_y + robot_y
+
+        return field_x, field_y
+    
     def destroy(self):
         self.cap.release()
         cv2.destroyAllWindows()

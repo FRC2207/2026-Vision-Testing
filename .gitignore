@@ -3,3 +3,4 @@ env/
 .vscode/
 *.pyc
 __pycache__/
+log.txt
