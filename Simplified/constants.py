@@ -1,7 +1,8 @@
 import numpy as np
+import json
 
 DEBUG_MODE = True
-APP_MODE = False
+APP_MODE = True
 
 #######################################################################
 # Custom PathPlanner Stuff
@@ -22,7 +23,7 @@ MAX_Y = 690.88
 
 # DBSCAN Stuff
 ELIPSON = 20
-MIN_SAMPLES = 3
+MIN_SAMPLES = 1
 
 #######################################################################
 # Camera stuff
@@ -35,8 +36,12 @@ YOLO_MODEL_FILE = "YoloModels/v26/nano/color-3.1-v26.onnx"
 GRAYSCALE = False
 NETWORKTABLES_IP = "10.22.7.2" # Pretty sure this is right
 
-CAMERA_DOWNWARD_PITCH_ANGLE = 12
-CAMERA_BOT_RELATIVE_YAW = 0
-CAMERA_HEIGHT = 8
-CAMERA_X_OFFSET = 6.5
-CAMERA_Y_OFFSET = 5.5
+with open("Simplified/camera_positions.json", "r") as file:
+    data = json.load(file)
+
+for camera in data["cameras"]:
+    CAMERA_DOWNWARD_PITCH_ANGLE = camera["downward_pitch"]
+    CAMERA_BOT_RELATIVE_YAW = camera["robot_relative_yaw"]
+    CAMERA_HEIGHT = camera["height"]
+    CAMERA_X_OFFSET = camera["x"]
+    CAMERA_Y_OFFSET = camera["y"]

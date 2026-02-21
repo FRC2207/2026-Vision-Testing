@@ -6,6 +6,7 @@ import time
 import os
 import logging
 import sys
+from scipy.spatial.transform import Rotation
 
 try:
     from rknn.api import RKNN
@@ -208,60 +209,55 @@ class Camera:
 
             distance_los = (self.ball_d_inches * self.focal_length_pixels) / avg_pixels
 
-            pt = self.apply_camera_transformations(cx, cy, img_w, img_h, distance_los)
-            if pt is None:
-                continue
+            # Transform from pixel coordinates to robot-relative coordinates
+            robot_point = self._pixel_to_robot_coordinates(
+                cx, cy, distance_los, img_w, img_h
+            )
 
-            map_points.append([pt[0], pt[1]])
+            if robot_point is not None:
+                map_points.append(robot_point)
 
         return np.array(map_points) if map_points else np.empty((0, 2))
-
-    def apply_camera_transformations(self, cx_pixel, cy_pixel, img_w, img_h, distance_los):
-        cx0 = img_w / 2.0
-        cy0 = img_h / 2.0
-        f = self.focal_length_pixels
-
-        dx = cx_pixel - cx0
-        dy = cy_pixel - cy0
-
-        alpha = math.atan2(dx, f)
-        beta = math.atan2(dy, f)
-
-        # The pitch angle shifts what we consider "center" vertically
+    
+    def _pixel_to_robot_coordinates(self, pixel_x: float, pixel_y: float, distance_los: float, img_w: int, img_h: int) -> np.ndarray | None:
+        # I have no clue if this math is actually right, but the tests say yes
+        # Its partly vibe coded but I reviewd it but also im failing my precalc class so idk
+        pixel_offset_x = pixel_x - (img_w / 2.0)
+        horizontal_angle_rad = math.radians(self.camera_fov * pixel_offset_x / img_w)
+        
         pitch_rad = math.radians(self.camera_pitch_angle)
         
-        # The vertical angle relative to the camera's optical axis (not relative to horizontal)
-        # This is just the angle from the image center to the object
-        vertical_angle_from_center = beta
+        camera_height = self.camera_height
         
-        # Decompose line-of-sight distance into components
-        # The line-of-sight distance is calculated from bounding box size
-        # We decompose it based on the angles from image center
-        local_x = distance_los * math.cos(vertical_angle_from_center) * math.cos(alpha)
-        local_y = distance_los * math.cos(vertical_angle_from_center) * math.sin(alpha)
-
+        if camera_height > 0:
+            true_horizontal_distance = math.sqrt(max(distance_los**2 - camera_height**2, 0.1))
+        else:
+            true_horizontal_distance = distance_los
+        
+        aspect_ratio = img_h / img_w
+        vertical_fov = self.camera_fov * aspect_ratio
+        pixel_offset_y = pixel_y - (img_h / 2.0)
+        angle_in_image_rad = math.radians(vertical_fov * pixel_offset_y / img_h)
+        
+        total_angle_to_object = pitch_rad + angle_in_image_rad
+        
+        actual_angle_to_object = math.atan(camera_height / true_horizontal_distance)
+        
+        left_right_distance = true_horizontal_distance * math.sin(horizontal_angle_rad)
+        forward_distance = true_horizontal_distance * math.cos(horizontal_angle_rad)
+        
         yaw_rad = math.radians(self.camera_bot_relative_yaw)
-        rot_x = (local_x * math.cos(yaw_rad)) - (local_y * math.sin(yaw_rad))
-        rot_y = (local_x * math.sin(yaw_rad)) + (local_y * math.cos(yaw_rad))
-
-        robot_rel_x = rot_x + self.camera_x
-        robot_rel_y = rot_y + self.camera_y
-
-        return robot_rel_x, robot_rel_y
         
-    def to_field_relative(self, rel_x, rel_y, robot_x, robot_y, robot_heading):
-        # this wont work or smth im tweaking just dont use it but keep it here
-        # robot_heading should be in degrees i think
-        # 0 rad = facing down the field positve y
-        # Positive = rotating towards the right.
-
-        f_x = (rel_x * math.cos(robot_heading)) - (rel_y * math.sin(robot_heading))
-        f_y = (rel_x * math.sin(robot_heading)) + (rel_y * math.cos(robot_heading))
-
-        field_x = f_x + robot_x
-        field_y = f_y + robot_y
-
-        return field_x, field_y
+        cos_yaw = math.cos(yaw_rad)
+        sin_yaw = math.sin(yaw_rad)
+        
+        x_rotated = forward_distance * sin_yaw + left_right_distance * cos_yaw
+        y_rotated = forward_distance * cos_yaw - left_right_distance * sin_yaw
+        
+        x_inches = x_rotated + self.camera_x
+        y_inches = y_rotated + self.camera_y
+        
+        return np.array([x_inches, y_inches], dtype=np.float32)
     
     def destroy(self):
         self.cap.release()

@@ -1,0 +1,11 @@
+{
+    "cameras": [
+        {
+            "x": 50,
+            "y": -50,
+            "height": 38,
+            "downward_pitch": 10,
+            "robot_relative_yaw": 0
+        }
+    ]
+}

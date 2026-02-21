@@ -22,7 +22,12 @@ camera = Camera(
     0,
     constants.CAMERA_FOV, constants.KNOWN_CALIBRATION_DISTANCE,
         constants.BALL_D_INCHES, constants.KNOWN_CALIBRATION_PIXEL_HEIGHT,
-    constants.YOLO_MODEL_FILE, 10, 1, grayscale=constants.GRAYSCALE,
+    constants.YOLO_MODEL_FILE,
+    constants.CAMERA_DOWNWARD_PITCH_ANGLE, constants.CAMERA_BOT_RELATIVE_YAW,
+    constants.CAMERA_HEIGHT,
+    constants.CAMERA_X_OFFSET,
+    constants.CAMERA_Y_OFFSET,
+    grayscale=constants.GRAYSCALE,
     debug_mode=constants.DEBUG_MODE,
 )
 
@@ -30,7 +35,7 @@ if constants.APP_MODE:
     camera_app = CameraApp()
     threading.Thread(target=camera_app.run, daemon=True).start()
 
-network_handler = NetworkTableHandler(constants.NETWORKTABLES_IP)
+# network_handler = NetworkTableHandler(constants.NETWORKTABLES_IP)
 
 if __name__ == "__main__":
     try:
@@ -50,21 +55,23 @@ if __name__ == "__main__":
         while True:
             start_time = time.perf_counter()
             fuel_positions = camera.run()
-            vision_end_time = time.perf_counter()
+            for ball in fuel_positions:
+                print(ball)
+            # vision_end_time = time.perf_counter()
 
-            if len(fuel_positions) == 0:
-                logger.warning("No fuel positions detected. Skipping loop iteration.")
-                continue
-            else:
-                logger.info(f"Detected fuels: {len(fuel_positions)}")
+            # if len(fuel_positions) == 0:
+            #     logger.warning("No fuel positions detected. Skipping loop iteration.")
+            #     continue
+            # else:
+            #     logger.info(f"Detected fuels: {len(fuel_positions)}")
 
-            if constants.APP_MODE:
-                _, frame = camera.get_yolo_data()
-                camera_app.set_frame(frame)
-            _, fuel_positions = planner.update_fuel_positions(fuel_positions)
-            network_handler.send_data(fuel_positions, "fuel_data", "yolo_data")
+            # if constants.APP_MODE:
+            #     _, frame = camera.get_yolo_data()
+            #     camera_app.set_frame(frame)
+            # _, fuel_positions = planner.update_fuel_positions(fuel_positions)
+            # # network_handler.send_data(fuel_positions, "fuel_data", "yolo_data")
 
-            end_time = time.perf_counter()
-            logger.info(f"Vision time: {vision_end_time - start_time}. Loop time: {end_time - start_time}")
+            # end_time = time.perf_counter()
+            # logger.info(f"Vision time: {vision_end_time - start_time}. Loop time: {end_time - start_time}")
     finally:
         camera.destroy()

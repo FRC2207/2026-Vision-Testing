@@ -36,8 +36,8 @@ class PathPlanner:
         fig, ax = plt.subplots(figsize=(10, 7))
 
         # Basic axes setup I'll add the dynamic stuff later maybe
-        ax.set_xlim(-50, 50)
-        ax.set_ylim(0, 100)
+        ax.set_xlim(0, 317)
+        ax.set_ylim(0, 690.88)
         ax.set_aspect('equal')
         ax.grid(True, alpha=0.2)
         ax.set_title('Real-time ploty thingie', fontsize=14, fontweight='bold')

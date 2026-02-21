@@ -38,4 +38,4 @@ def run_detection(video_source: int, model_file_path: str):
     cv2.destroyAllWindows()
 
 if __name__ == "__main__":
-    run_detection(0, "YoloModels/v26/nano/color-3.1-v26.onnx")
+    run_detection(1, "YoloModels/v26/nano/color-3.1-v26.onnx")

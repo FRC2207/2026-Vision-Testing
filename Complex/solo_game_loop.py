@@ -22,7 +22,7 @@ camera = Camera(
     0,
     constants.CAMERA_FOV, constants.KNOWN_CALIBRATION_DISTANCE,
         constants.BALL_D_INCHES, constants.KNOWN_CALIBRATION_PIXEL_HEIGHT,
-    constants.YOLO_MODEL_FILE, 10, 1, grayscale=constants.GRAYSCALE,
+    constants.YOLO_MODEL_FILE, 10, 1, constants.CAMERA_HEIGHT, constants.CAMERA_X_OFFSET, constants.CAMERA_Y_OFFSET, grayscale=constants.GRAYSCALE,
     debug_mode=constants.DEBUG_MODE,
 )
 
@@ -30,7 +30,7 @@ if constants.APP_MODE:
     camera_app = CameraApp()
     threading.Thread(target=camera_app.run, daemon=True).start()
 
-network_handler = NetworkTableHandler(constants.NETWORKTABLES_IP)
+# network_handler = NetworkTableHandler(constants.NETWORKTABLES_IP)
 
 if __name__ == "__main__":
     try:
@@ -45,6 +45,9 @@ if __name__ == "__main__":
             fuel_positions, constants.STARTING_POSITION,
             constants.ELIPSON, constants.MIN_SAMPLES,
             debug_mode=constants.DEBUG_MODE,
+            degree=constants.DEGREE,
+            collection_priority=constants.COLLECTION_PRIORITY,
+            smoothing_factor=constants.SMOOTHING_FACTOR
         )
 
         while True:
@@ -62,7 +65,7 @@ if __name__ == "__main__":
                 _, frame = camera.get_yolo_data()
                 camera_app.set_frame(frame)
             noise_positions, raw_path, smooth_path = planner.update_fuel_positions(fuel_positions)
-            network_handler.send_data(smooth_path, "smooth_path", "yolo_data")
+            # network_handler.send_data(smooth_path, "smooth_path", "yolo_data")
 
             end_time = time.perf_counter()
             logger.info(f"Vision time: {vision_end_time - start_time}. Loop time: {end_time - start_time}")
