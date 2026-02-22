@@ -1,6 +1,6 @@
-This whole file is commented out but in "theory" it works
+# This whole file is commented out but in "theory" it works
 
-TODO: look into this for WAY higher fps: profile_results = rknn.profiling(inputs=[image])
+# TODO: look into this for WAY higher fps: profile_results = rknn.profiling(inputs=[image])
 
 import os
 import torch
