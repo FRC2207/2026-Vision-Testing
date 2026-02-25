@@ -1,5 +1,12 @@
 from ultralytics import YOLO
+import os
 
-model = YOLO("YoloModels/v26/nano/test/color-3.1-v26.pt")
+os.chdir("YoloModels/v26/nano/test")
 
-model.export(format='rknn', name="rk3588", data="data.yaml")
+model = YOLO("color-3.1-v26.pt")
+
+model.export(
+    format="rknn",
+    name="rk3588",
+    data="../../../data.yaml"
+)
