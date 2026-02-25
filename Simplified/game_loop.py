@@ -7,6 +7,9 @@ import constants
 from Classes.FuelTracker import FuelTracker
 from Classes.Fuel import Fuel
 import logging
+import numpy as np
+from Classes.CameraApp import CameraApp
+import threading
 
 logging.basicConfig(
     level=logging.INFO,
@@ -24,6 +27,7 @@ camera1 = Camera(
         constants.BALL_D_INCHES, constants.KNOWN_CALIBRATION_PIXEL_HEIGHT,
     constants.YOLO_MODEL_FILE, 10, 1, grayscale=constants.GRAYSCALE,
     debug_mode=constants.DEBUG_MODE,
+    subsystem="field"
 )
 
 camera2 = Camera(
@@ -32,6 +36,7 @@ camera2 = Camera(
         constants.BALL_D_INCHES, constants.KNOWN_CALIBRATION_PIXEL_HEIGHT,
     constants.YOLO_MODEL_FILE, 10, 1, grayscale=constants.GRAYSCALE,
     debug_mode=constants.DEBUG_MODE,
+    subsystem="field"
 )
 
 camera3 = Camera(
@@ -40,6 +45,7 @@ camera3 = Camera(
         constants.BALL_D_INCHES, constants.KNOWN_CALIBRATION_PIXEL_HEIGHT,
     constants.YOLO_MODEL_FILE, 10, 1, grayscale=constants.GRAYSCALE,
     debug_mode=constants.DEBUG_MODE,
+    subsystem="hopper"
 )
 
 camera4 = Camera(
@@ -48,52 +54,69 @@ camera4 = Camera(
         constants.BALL_D_INCHES, constants.KNOWN_CALIBRATION_PIXEL_HEIGHT,
     constants.YOLO_MODEL_FILE, 10, 1, grayscale=constants.GRAYSCALE,
     debug_mode=constants.DEBUG_MODE,
+    subsystem="outtake"
 )
 
 network_handler = NetworkTableHandler(constants.NETWORKTABLES_IP)
 
+if constants.APP_MODE:
+    camera_app = CameraApp()
+    threading.Thread(target=camera_app.run, daemon=True).start()
+
 def numpy_to_fuel_list(fuel_positions):
     return [Fuel(p[0], p[1]) for p in fuel_positions]
+
+def fuel_list_to_numpy(fuel_list: list[Fuel]):
+    return np.array([fuel.get_position() for fuel in fuel_list])
 
 if __name__ == "__main__":
     try:
         logger.info("Creating simplified loop.")
 
         # Create planner
-        starting_positions = camera1.run()
-        fuel_tracker = FuelTracker([Fuel(p[0], p[1]) for p in starting_positions], constants.DISTANCE_THRESHOLD)    
+        fuel_tracker = FuelTracker([], constants.DISTANCE_THRESHOLD)    
         planner = PathPlanner(
-            starting_positions, constants.STARTING_POSITION,
+            [], constants.STARTING_POSITION,
             constants.ELIPSON, constants.MIN_SAMPLES,
             debug_mode=constants.DEBUG_MODE,
         )
 
         while True:
             # This update to run multiple cameras its probaly gonna destroy fps
-            fuel_positions1 = numpy_to_fuel_list(camera1.run())
-            fuel_positions2 = numpy_to_fuel_list(camera2.run())
-            fuel_positions3 = numpy_to_fuel_list(camera3.run())
-            fuel_positions4 = numpy_to_fuel_list(camera4.run())
+            outtake_positions = []
+            hopper_positions = []
 
-            fuel_tracker.set_fuel_list(fuel_positions1)
-            fuel_positions = fuel_tracker.update(fuel_positions2)
-            fuel_positions = fuel_tracker.update(fuel_positions3)
-            fuel_positions = fuel_tracker.update(fuel_positions4)
+            fuel_tracker.set_fuel_list([])
+            for camera in [camera1, camera2, camera3, camera4]:
+                if camera.subsystem == "hopper":
+                    hopper_positions = numpy_to_fuel_list(camera.run())
+                elif camera.subsystem == "outtake":
+                    outtake_positions = numpy_to_fuel_list(camera.run())
+                else:
+                    fuel_tracker.update(numpy_to_fuel_list(camera.run()))
 
-            start_time = time.perf_counter()
-            vision_end_time = time.perf_counter()
+            network_handler.send_data(True if len(hopper_positions) > 0 else False, "hopper_sees_object", "yolo_data")
 
+            # start_time = time.perf_counter()
+            # vision_end_time = time.perf_counter()
+
+            fuel_positions = fuel_list_to_numpy(fuel_tracker.fuel_list) # Cause im dumb and didnt make pathplanner work with Fuel objects
             if len(fuel_positions) == 0:
                 logger.info(f"No fuel positions detected. Skipping loop iteration.")
                 continue
             else:
                 logger.info(f"Detected fuels: {len(fuel_positions)}")
 
-            noise_positions, raw_path, smooth_path = planner.update_fuel_positions(fuel_positions)
-            network_handler.send_data(smooth_path, "smooth_path", "yolo_data")
+            if constants.APP_MODE:
+                _, frame = camera.get_yolo_data()
+                camera_app.set_frame(frame)
 
-            end_time = time.perf_counter()
-            logger.info(f"Vision time: {vision_end_time - start_time}. Loop time: {end_time - start_time}")
+            noise_positions, fuel_positions = planner.update_fuel_positions(fuel_positions)
+            fuel_objects = numpy_to_fuel_list(fuel_positions)
+            network_handler.send_data(fuel_objects, "field_positions", "yolo_data")
+
+            # end_time = time.perf_counter()
+            # logger.info(f"Vision time: {vision_end_time - start_time}. Loop time: {end_time - start_time}")
     finally:
         camera1.destroy()
         camera2.destroy()

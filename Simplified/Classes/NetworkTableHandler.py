@@ -2,6 +2,7 @@ import ntcore
 import time
 import numpy as np
 import logging
+from Classes.Fuel import Fuel
 
 class NetworkTableHandler:
     def __init__(self, ip: str):
@@ -24,14 +25,20 @@ class NetworkTableHandler:
                 self.connected = False
                 break
 
-    def send_data(self, data, data_name: str, table_name: str):
+    def send_data(self, data: list[Fuel]|int|float|str|bool, data_name: str, table_name: str):
         if self.connected:
             try:
                 table = self.inst.getTable(table_name)
-                if isinstance(data, (list, np.ndarray)):
+                if isinstance(data, list[Fuel]):
                     # Convert to list of floats
-                    data_list = [float(x) for sublist in data for x in sublist] if isinstance(data, np.ndarray) else data
-                    table.putNumberArray(data_name, data_list)
+                    x_points = []
+                    y_points = []
+                    for fuel in data:
+                        x_points.append(fuel.get_position()[0])
+                        y_points.append(fuel.get_position()[1])
+
+                    table.putNumberArray(data_name + "_X", x_points)
+                    table.putNumberArray(data_name + "_Y", y_points)
                 elif isinstance(data, (int, float)):
                     table.putNumber(data_name, data)
                 elif isinstance(data, str):

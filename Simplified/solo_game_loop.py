@@ -7,6 +7,8 @@ import constants
 from Classes.CameraApp import CameraApp
 import threading
 import logging
+import numpy as np
+from Classes.Fuel import Fuel
 
 logging.basicConfig(
     level=logging.INFO,
@@ -29,13 +31,20 @@ camera = Camera(
     constants.CAMERA_Y_OFFSET,
     grayscale=constants.GRAYSCALE,
     debug_mode=constants.DEBUG_MODE,
+    subsystem="field"
 )
 
 if constants.APP_MODE:
     camera_app = CameraApp()
     threading.Thread(target=camera_app.run, daemon=True).start()
 
-# network_handler = NetworkTableHandler(constants.NETWORKTABLES_IP)
+network_handler = NetworkTableHandler(constants.NETWORKTABLES_IP)
+
+def numpy_to_fuel_list(fuel_positions):
+    return [Fuel(p[0], p[1]) for p in fuel_positions]
+
+def fuel_list_to_numpy(fuel_list: list[Fuel]):
+    return np.array([fuel.get_position() for fuel in fuel_list])
 
 if __name__ == "__main__":
     try:
@@ -43,9 +52,10 @@ if __name__ == "__main__":
 
         # Create planner
         try:
-            fuel_positions = camera.run()
+            fuel_positions = fuel_list_to_numpy(camera.run())
         except:
             fuel_positions = []
+
         planner = PathPlanner(
             fuel_positions, constants.STARTING_POSITION,
             constants.ELIPSON, constants.MIN_SAMPLES,
@@ -53,23 +63,23 @@ if __name__ == "__main__":
         )
 
         while True:
-            start_time = time.perf_counter()
+            # start_time = time.perf_counter()
             fuel_positions = camera.run()
-            for ball in fuel_positions:
-                print(ball)
             # vision_end_time = time.perf_counter()
 
-            # if len(fuel_positions) == 0:
-            #     logger.warning("No fuel positions detected. Skipping loop iteration.")
-            #     continue
-            # else:
-            #     logger.info(f"Detected fuels: {len(fuel_positions)}")
+            if len(fuel_positions) == 0:
+                logger.warning("No fuel positions detected. Skipping loop iteration.")
+                continue
+            else:
+                # logger.info(f"Detected fuels: {len(fuel_positions)}")
+                pass
 
-            # if constants.APP_MODE:
-            #     _, frame = camera.get_yolo_data()
-            #     camera_app.set_frame(frame)
-            # _, fuel_positions = planner.update_fuel_positions(fuel_positions)
-            # # network_handler.send_data(fuel_positions, "fuel_data", "yolo_data")
+            if constants.APP_MODE:
+                _, frame = camera.get_yolo_data()
+                camera_app.set_frame(frame)
+
+            _, fuel_positions = planner.update_fuel_positions(fuel_positions)
+            network_handler.send_data(fuel_positions, "field_positions", "yolo_data")
 
             # end_time = time.perf_counter()
             # logger.info(f"Vision time: {vision_end_time - start_time}. Loop time: {end_time - start_time}")

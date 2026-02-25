@@ -105,13 +105,14 @@ class YoloWrapper:
 class Camera:
     def __init__(self, source: int|str, camera_fov: int, known_calibration_distance: int, ball_d_inches: int, known_calibration_pixel_height: int, yolo_model_file: str,
                  camera_downward_angle: float, camera_bot_relative_angle: float ,camera_height: int, camera_x: int, camera_y: int,
-                 grayscale: bool=True, margin: int=10, min_confidence: float=0.5, debug_mode: bool=False):
+                 grayscale: bool=True, margin: int=10, min_confidence: float=0.5, debug_mode: bool=False, subsytem: str="field"):
         self.source = source
         self.camera_fov = camera_fov
         self.known_calibration_distance = known_calibration_distance
         self.ball_d_inches = ball_d_inches
         self.known_calibration_pixel_height = known_calibration_pixel_height
-        
+        self.subsystem = subsytem
+
         self.margin = margin
         self.min_confidence = min_confidence
         self.grayscale = grayscale
@@ -217,7 +218,7 @@ class Camera:
             if robot_point is not None:
                 map_points.append(robot_point)
 
-        return np.array(map_points) if map_points else np.empty((0, 2))
+        return np.array(map_points) if map_points else np.empty((0, 2)), self.subsystem
     
     def _pixel_to_robot_coordinates(self, pixel_x: float, pixel_y: float, distance_los: float, img_w: int, img_h: int) -> np.ndarray | None:
         # I have no clue if this math is actually right, but the tests say yes
