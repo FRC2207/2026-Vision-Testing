@@ -16,14 +16,14 @@ class NetworkTableHandler:
 
         self.logger.info("Initializing NetworkTables connection, attempting to connect to 2207...")
         i = 0
-        while not self.inst.isConnected():
-            time.sleep(0.1)
-            i += 1
+        # while not self.inst.isConnected():
+        #     time.sleep(0.1)
+        #     i += 1
 
-            if (i > 600):  # Wait for 60 seconds max
-                self.logger.warning(f"NetworkTables connection timed out after 60 seconds (1 minute for those who don't know math).")
-                self.connected = False
-                break
+        #     if (i > 600):  # Wait for 60 seconds max
+        #         self.logger.warning(f"NetworkTables connection timed out after 60 seconds (1 minute for those who don't know math).")
+        #         self.connected = False
+        #         break
 
     def send_data(self, data: list[Fuel]|int|float|str|bool, data_name: str, table_name: str):
         if self.connected:

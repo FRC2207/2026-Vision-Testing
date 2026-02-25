@@ -65,6 +65,8 @@ if __name__ == "__main__":
         while True:
             # start_time = time.perf_counter()
             fuel_positions = camera.run()
+            for fuel_position in fuel_positions:
+                print(fuel_position)
             # vision_end_time = time.perf_counter()
 
             if len(fuel_positions) == 0:
