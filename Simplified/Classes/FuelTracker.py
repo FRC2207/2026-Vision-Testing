@@ -20,6 +20,9 @@ class FuelTracker:
                 highest = fuel.get_id()
 
         return highest
+    
+    def get_fuel_list(self) -> list[Fuel]:
+        return self.fuel_list
 
     def update(self, new_fuel_list: list[Fuel]):
         for new_fuel in new_fuel_list:
@@ -39,3 +42,8 @@ class FuelTracker:
 
     def set_fuel_list(self, fuels: list[Fuel]):
         self.fuel_list = fuels
+
+    def sort(self):
+        self.fuel_list.sort(
+            key=lambda fuel: np.linalg.norm(fuel.get_position() - np.array([0, 0])) # Cause its robot relative
+        )

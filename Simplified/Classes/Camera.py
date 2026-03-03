@@ -13,12 +13,10 @@ try:
 except ImportError:
     RKNN = None
 
-
 class Box:
     def __init__(self, xyxy, conf):
         self.xyxy = xyxy
         self.conf = conf
-
 
 class Results:
     def __init__(self, boxes: list[Box], orig_shape):
@@ -70,7 +68,7 @@ class YoloWrapper:
                 raise ValueError(
                     f"Failed to initialize RKNN runtime for model: {self.model_file}"
                 )
-        elif model_file.endswith(".onnx") or model_file.endswith(".pt"):
+        elif model_file.endswith(".onnx") or model_file.endswith(".pt") or model_file.endswith("openvino_model"):
             self.model_type = "yolo"
             self.model = YOLO(self.model_file, verbose=False, task="detect")
         else:
@@ -270,7 +268,27 @@ class Camera:
                 map_points.append(robot_point)
 
         return np.array(map_points) if map_points else np.empty((0, 2))
-    
+
+    def calculate_from_mosaic(self, local_x, local_y, local_w, local_h):
+        img_w = self.cap.get(cv2.CAP_PROP_FRAME_WIDTH) or 640
+        img_h = self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT) or 480
+        
+        scale_x = img_w / 320.0
+        scale_y = img_h / 320.0
+        
+        native_cx = local_x * scale_x
+        native_cy = local_y * scale_y
+        native_avg_px = ((local_w * scale_x) + (local_h * scale_y)) / 2.0
+        
+        if native_avg_px <= 0:
+            return None
+
+        distance_los = (self.ball_d_inches * self.focal_length_pixels) / native_avg_px
+
+        return self._pixel_to_robot_coordinates(
+            native_cx, native_cy, distance_los, int(img_w), int(img_h)
+        )
+
     def get_subsystem(self):
         return self.subsystem
 

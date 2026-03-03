@@ -1,9 +1,9 @@
 {
     "cameras": [
         {
-            "x": -13,
-            "y": 7,
-            "height": 8.25,
+            "x": -4.5,
+            "y": 6.75,
+            "height": 4.25,
             "downward_pitch": 0,
             "robot_relative_yaw": 180
         }

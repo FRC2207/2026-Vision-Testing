@@ -11,3 +11,4 @@ flask
 pynetworktables
 pygame
 Pillow
+ntcore

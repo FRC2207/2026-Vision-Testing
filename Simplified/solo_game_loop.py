@@ -9,6 +9,7 @@ import threading
 import logging
 import numpy as np
 from Classes.Fuel import Fuel
+from Classes.FuelTracker import FuelTracker
 
 logging.basicConfig(
     level=logging.INFO,
@@ -61,10 +62,15 @@ if __name__ == "__main__":
             constants.ELIPSON, constants.MIN_SAMPLES,
             debug_mode=constants.DEBUG_MODE,
         )
+        fuel_tracker = FuelTracker(fuel_positions, constants.DISTANCE_THRESHOLD)
 
         while True:
             # start_time = time.perf_counter()
-            fuel_positions = camera.run()
+            fuel_positions = numpy_to_fuel_list(camera.run())
+            fuel_tracker.set_fuel_list(fuel_positions)
+            fuel_tracker.sort()
+
+            fuel_positions = fuel_tracker.get_fuel_list()
             for fuel_position in fuel_positions:
                 print(fuel_position)
             # vision_end_time = time.perf_counter()
@@ -80,7 +86,7 @@ if __name__ == "__main__":
                 _, frame = camera.get_yolo_data()
                 camera_app.set_frame(frame)
 
-            _, fuel_positions = planner.update_fuel_positions(fuel_positions)
+            _, fuel_positions = planner.update_fuel_positions(fuel_list_to_numpy(fuel_positions))
             network_handler.send_data(fuel_positions, "field_positions", "yolo_data")
 
             # end_time = time.perf_counter()
