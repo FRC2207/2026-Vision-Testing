@@ -3,6 +3,7 @@ import time
 import numpy as np
 import logging
 from Classes.Fuel import Fuel
+#TODO: Make this way faster, probaly gonna cause CPU lag spikes
 
 class NetworkTableHandler:
     def __init__(self, ip: str):

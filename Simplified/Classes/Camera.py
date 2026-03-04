@@ -241,9 +241,15 @@ class Camera:
             x1, y1, x2, y2 = box.xyxy
             conf = box.conf
 
+            # Only accept things with a high enough confidence
             if conf < self.min_confidence:
                 continue
+            # Only accept boxes that are in the margin
             if x1 < self.margin or y1 < self.margin or x2 > (img_w - self.margin):
+                continue
+            aspect_ratio = w_pixels / h_pixels
+            # Only accept boxes that are roughly square
+            if not (0.8 <= aspect_ratio <= 1.2):
                 continue
 
             confidence_list.append(conf)
@@ -302,34 +308,21 @@ class Camera:
     ) -> np.ndarray | None:
         # I have no clue if this math is actually right, but the tests say yes
         # Its partly vibe coded but I reviewd it but also im failing my precalc class so idk
-        pixel_offset_x = pixel_x - (img_w / 2.0)
-        horizontal_angle_rad = math.radians(self.camera_fov * pixel_offset_x / img_w)
 
-        pitch_rad = math.radians(self.camera_pitch_angle)
+        pixel_offset_x = pixel_x - (img_w / 2.0)
+        horizontal_angle_rad = math.atan(pixel_offset_x / self.focal_length_pixels)
 
         camera_height = self.camera_height
 
-        if camera_height > 0:
-            true_horizontal_distance = math.sqrt(
-                max(distance_los**2 - camera_height**2, 0.1)
-            )
+        if camera_height > 0 and distance_los > camera_height:
+            true_horizontal_distance = math.sqrt(distance_los**2 - camera_height**2)
         else:
             true_horizontal_distance = distance_los
-
-        aspect_ratio = img_h / img_w
-        vertical_fov = self.camera_fov * aspect_ratio
-        pixel_offset_y = pixel_y - (img_h / 2.0)
-        angle_in_image_rad = math.radians(vertical_fov * pixel_offset_y / img_h)
-
-        total_angle_to_object = pitch_rad + angle_in_image_rad
-
-        actual_angle_to_object = math.atan(camera_height / true_horizontal_distance)
 
         left_right_distance = true_horizontal_distance * math.sin(horizontal_angle_rad)
         forward_distance = true_horizontal_distance * math.cos(horizontal_angle_rad)
 
         yaw_rad = math.radians(self.camera_bot_relative_yaw)
-
         cos_yaw = math.cos(yaw_rad)
         sin_yaw = math.sin(yaw_rad)
 
@@ -339,7 +332,10 @@ class Camera:
         x_inches = x_rotated + self.camera_x
         y_inches = y_rotated + self.camera_y
 
-        return np.array([x_inches, y_inches], dtype=np.float32)
+        x_meters = x_inches * 0.0254
+        y_meters = y_inches * 0.0254
+
+        return np.array([x_meters, y_meters], dtype=np.float32)
 
     def destroy(self):
         self.cap.release()
