@@ -7,6 +7,7 @@ import os
 import logging
 import sys
 from scipy.spatial.transform import Rotation
+import threading
 
 try:
     from rknn.api import RKNN
@@ -82,7 +83,6 @@ class YoloWrapper:
     def predict(self, frame) -> Results:
         if self.model_type == "rknn":
             img = cv2.resize(frame, self.input_size)
-            img = img.astype(np.float32) / 255.0
             img = np.expand_dims(img, axis=0)
             outputs = self.model.inference(inputs=[img])[0]
 
@@ -123,8 +123,16 @@ class YoloWrapper:
         if self.model_type == "rknn":
             self.model.release()
 
-
 class Camera:
+    # __slots__ = (
+    #     'source', 'camera_fov', 'known_calibration_distance', 'ball_d_inches',
+    #     'known_calibration_pixel_height', 'subsystem', 'margin', 'min_confidence',
+    #     'grayscale', 'yolo_model_file', 'camera_pitch_angle', 'camera_height',
+    #     'camera_x', 'camera_y', 'camera_bot_relative_yaw', 'debug_mode',
+    #     'ball_count', 'gui_available', 'logger', 'last_time', 'cap',
+    #     'focal_length_pixels', 'model', 'ret', 'frame'
+    # )
+
     def __init__(
         self,
         source: int | str,
@@ -172,6 +180,8 @@ class Camera:
         self.last_time = time.perf_counter()
 
         self.cap = cv2.VideoCapture(self.source)
+        self.stopped = False
+        self.ret, self.frame = self.cap.read()
         # self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
         # time.sleep(0.5)
 
@@ -184,15 +194,21 @@ class Camera:
         ) / self.ball_d_inches
 
         self.model = YoloWrapper(self.yolo_model_file)
+        threading.Thread(target=self._reader, daemon=True).start()
+
+    def _reader(self):
+        while not self.stopped:
+            ret, frame = self.cap.read()
+            if not ret:
+                self.logger.error(f"Failed to retrieve frame from: {self.source}")
+                raise ValueError(f"Failed to retrieve frame from: {self.source}")
+            if self.grayscale:
+                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+            self.frame = frame
 
     def get_frame(self):
-        ret, frame = self.cap.read()
-        if not ret:
-            self.logger.erro(f"Failed to retrieve frame from: {self.source}")
-            raise ValueError(f"Failed to retrieve frame from: {self.source}")
-        if self.grayscale:
-            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        return frame
+        return self.frame
 
     def get_yolo_data(self):
         frame = self.get_frame()
@@ -239,6 +255,8 @@ class Camera:
 
         for box in data.boxes:
             x1, y1, x2, y2 = box.xyxy
+            w_pixels = x2 - x1
+            h_pixels = y2 - y1
             conf = box.conf
 
             # Only accept things with a high enough confidence
@@ -257,8 +275,7 @@ class Camera:
             cx = (x1 + x2) / 2.0
             cy = (y1 + y2) / 2.0
 
-            w_pixels = x2 - x1
-            h_pixels = y2 - y1
+
             avg_pixels = (w_pixels + h_pixels) / 2.0
             if avg_pixels <= 0:
                 continue
@@ -338,5 +355,6 @@ class Camera:
         return np.array([x_meters, y_meters], dtype=np.float32)
 
     def destroy(self):
+        self.stopped = True
         self.cap.release()
         cv2.destroyAllWindows()

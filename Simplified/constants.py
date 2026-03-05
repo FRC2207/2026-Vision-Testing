@@ -1,8 +1,8 @@
 import numpy as np
 import json
 
-DEBUG_MODE = True
-APP_MODE = True
+DEBUG_MODE = False
+APP_MODE = False
 
 #######################################################################
 # Custom PathPlanner Stuff
@@ -32,7 +32,7 @@ CAMERA_FOV = 74.9
 KNOWN_CALIBRATION_DISTANCE = 12
 BALL_D_INCHES = 5.90551
 KNOWN_CALIBRATION_PIXEL_HEIGHT = 334 # This is guestimated from averaging data and hand tweaking it. Averaging ended at 292.5555555555556
-YOLO_MODEL_FILE = rf"YoloModels\v26\nano\test\color-3.1-v26.onnx"
+YOLO_MODEL_FILE = rf"YoloModels\v26\nano\clean\color-3.1-v26.onnx"
 GRAYSCALE = False
 NETWORKTABLES_IP = "10.22.7.2" # Pretty sure this is right
 

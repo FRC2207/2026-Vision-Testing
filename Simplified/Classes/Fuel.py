@@ -14,3 +14,6 @@ class Fuel:
     
     def set_id(self, id: int):
         self.id = id
+
+    def __str__(self):
+        return f"X: {self.x}, Y: {self.y}"

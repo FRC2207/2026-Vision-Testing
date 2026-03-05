@@ -65,18 +65,18 @@ if __name__ == "__main__":
         fuel_tracker = FuelTracker(fuel_positions, constants.DISTANCE_THRESHOLD)
 
         while True:
-            # start_time = time.perf_counter()
+            start_time = time.perf_counter()
             fuel_positions = numpy_to_fuel_list(camera.run())
+
             fuel_tracker.set_fuel_list(fuel_positions)
             fuel_tracker.sort()
-
             fuel_positions = fuel_tracker.get_fuel_list()
+
             for fuel_position in fuel_positions:
                 print(fuel_position)
-            # vision_end_time = time.perf_counter()
 
             if len(fuel_positions) == 0:
-                logger.warning("No fuel positions detected. Skipping loop iteration.")
+                # logger.warning("No fuel positions detected. Skipping loop iteration.")
                 continue
             else:
                 # logger.info(f"Detected fuels: {len(fuel_positions)}")
@@ -89,7 +89,9 @@ if __name__ == "__main__":
             _, fuel_positions = planner.update_fuel_positions(fuel_list_to_numpy(fuel_positions))
             network_handler.send_data(fuel_positions, "field_positions", "yolo_data")
 
-            # end_time = time.perf_counter()
-            # logger.info(f"Vision time: {vision_end_time - start_time}. Loop time: {end_time - start_time}")
+            end_time = time.perf_counter()
+            est_fps = 1/(end_time - start_time)
+            logger.info(f"Loop run time: {end_time - start_time}. Est FPS: {est_fps}")
+            # logger.info(f"Detected Fuel Positions: {[fuel_position for fuel_position in fuel_positions]}")
     finally:
         camera.destroy()
