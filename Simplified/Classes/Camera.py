@@ -11,9 +11,9 @@ import threading
 
 try:
     from rknnlite.api import RKNNLite
-    RKNN = True
+    RKNN_FOUND = True
 except ImportError:
-    RKNN = None
+    RKNN_FOUND = None
 
 class Box:
     def __init__(self, xyxy, conf):
@@ -32,7 +32,6 @@ class Results:
             cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
         return frame
 
-
 class YoloWrapper:
     def __init__(self, model_file: str, input_size=(640, 640)):
         self.model_file = model_file
@@ -42,7 +41,7 @@ class YoloWrapper:
         self.logger = logging.getLogger(__name__)
 
         if model_file.endswith(".rknn"):
-            if RKNN is None:
+            if RKNN_FOUND is None:
                 self.logger.error(
                     "Could node import RKNNLite. This could be because you meant to run a .pt or .onnx on a laptop, but if its the pi ur cooked."
                 )
@@ -50,7 +49,7 @@ class YoloWrapper:
                     "Could node import RKNNLite. This could be because you meant to run a .pt or .onnx on a laptop, but if its the pi ur cooked."
                 )
             self.model_type = "rknn"
-            self.model = RKNN()
+            self.model = RKNNLite()
             ret = self.model.load_rknn(self.model_file)
             if ret != 0:
                 self.logger.error(f"Failed to load RKNN model: {self.model_file}")
