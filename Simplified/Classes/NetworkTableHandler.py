@@ -2,6 +2,7 @@ import ntcore
 import logging
 import numpy as np
 from Classes.Fuel import Fuel
+import time
 
 class NetworkTableHandler:
     def __init__(self, ip: str):
@@ -10,7 +11,16 @@ class NetworkTableHandler:
         self.inst = ntcore.NetworkTableInstance.getDefault()
         self.inst.startClient4("CustomVisionStuff")
         self.inst.setServerTeam(2207)
-        self.connected = True
+
+        i = 0
+        while (not self.inst.isConnected()) and (i < 5):
+            self.logger.warning("Network tables not connected, attempting to connect.")
+
+            time.sleep(1)
+            i += 1
+
+        if i < 5:
+            self.logger.error(f"Network tables could not connect after 5 seconds")
         
         self._subscribers = {}
         self._tables = {}
@@ -21,7 +31,7 @@ class NetworkTableHandler:
         return self._tables[table_name]
 
     def send_data(self, data, data_name: str, table_name: str):
-        if not self.connected:
+        if not self.inst.isConnected():
             return
 
         table = self._get_table(table_name)
@@ -39,7 +49,7 @@ class NetworkTableHandler:
             table.putBoolean(data_name, data)
 
     def get_data(self, data_type, data_name: str, table_name: str):
-        if not self.connected:
+        if not self.inst.isConnected():
             return [0.0, 0.0]
 
         # Unique key for this specific data stream

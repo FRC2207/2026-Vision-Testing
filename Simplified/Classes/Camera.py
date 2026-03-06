@@ -84,11 +84,11 @@ class YoloWrapper:
         if self.model_type == "rknn":
             img = cv2.resize(frame, self.input_size)
             img = np.expand_dims(img, axis=0)
-            outputs = self.model.inference(inputs=[img])[0]
+            outputs = self.model.inference(inputs=[img], verbose=False, imgsz=320)[0]
 
             return self._convert_rknn_outputs(outputs, frame.shape)
         elif self.model_type == "yolo":
-            results = self.model(frame, verbose=False)[0]
+            results = self.model(frame, verbose=False, imgsz=320)[0]
 
             return self._convert_ultralytics_to_results(results)
         else:
@@ -124,14 +124,14 @@ class YoloWrapper:
             self.model.release()
 
 class Camera:
-    # __slots__ = (
-    #     'source', 'camera_fov', 'known_calibration_distance', 'ball_d_inches',
-    #     'known_calibration_pixel_height', 'subsystem', 'margin', 'min_confidence',
-    #     'grayscale', 'yolo_model_file', 'camera_pitch_angle', 'camera_height',
-    #     'camera_x', 'camera_y', 'camera_bot_relative_yaw', 'debug_mode',
-    #     'ball_count', 'gui_available', 'logger', 'last_time', 'cap',
-    #     'focal_length_pixels', 'model', 'ret', 'frame'
-    # )
+    __slots__ = (
+        'source', 'camera_fov', 'known_calibration_distance', 'ball_d_inches',
+        'known_calibration_pixel_height', 'subsystem', 'margin', 'min_confidence',
+        'grayscale', 'yolo_model_file', 'camera_pitch_angle', 'camera_height',
+        'camera_x', 'camera_y', 'camera_bot_relative_yaw', 'debug_mode',
+        'ball_count', 'gui_available', 'logger', 'last_time', 'cap',
+        'focal_length_pixels', 'model', 'ret', 'frame', "__dict__"
+    )
 
     def __init__(
         self,
@@ -240,7 +240,7 @@ class Camera:
                 cv2.LINE_AA,
             )
 
-            if self.gui_available:  # Fixes a really anooying error I had
+            if self.gui_available:
                 cv2.imshow("YOLO Detections", annotated_frame)
                 cv2.waitKey(1)
 

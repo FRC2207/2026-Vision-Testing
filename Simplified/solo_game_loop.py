@@ -14,7 +14,7 @@ from Classes.FuelTracker import FuelTracker
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    filemode="w", # Append dont overwrite
+    filemode="w", # Overwrite, don't append
     filename="log.txt"
 )
 
@@ -64,7 +64,8 @@ if __name__ == "__main__":
         )
         fuel_tracker = FuelTracker(fuel_positions, constants.DISTANCE_THRESHOLD)
 
-        while True:
+        i = 0
+        while i < 1000:
             start_time = time.perf_counter()
             fuel_positions = numpy_to_fuel_list(camera.run())
 
@@ -83,7 +84,7 @@ if __name__ == "__main__":
                 pass
 
             if constants.APP_MODE:
-                _, frame = camera.get_yolo_data()
+                frame = camera.get_frame()
                 camera_app.set_frame(frame)
 
             _, fuel_positions = planner.update_fuel_positions(fuel_list_to_numpy(fuel_positions))
@@ -93,5 +94,6 @@ if __name__ == "__main__":
             est_fps = 1/(end_time - start_time)
             logger.info(f"Loop run time: {end_time - start_time}. Est FPS: {est_fps}")
             # logger.info(f"Detected Fuel Positions: {[fuel_position for fuel_position in fuel_positions]}")
+            i += 1
     finally:
         camera.destroy()
