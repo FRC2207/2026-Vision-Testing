@@ -10,7 +10,8 @@ from scipy.spatial.transform import Rotation
 import threading
 
 try:
-    from rknn.api import RKNN
+    from rknnlite.api import RKNNLite
+    RKNN = True
 except ImportError:
     RKNN = None
 
