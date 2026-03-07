@@ -44,4 +44,4 @@ class CameraApp:
         """
     
     def run(self, host='0.0.0.0', port=5000, debug=False, use_reloader=False):
-        self.app.run(host=host, port=port, debug=debug, use_reloader=False)
+        self.app.run(host=host, port=port, debug=debug, use_reloader=use_reloader, threaded=False)
