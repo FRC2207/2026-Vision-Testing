@@ -4,7 +4,9 @@ rknn = RKNN()
 
 rknn.config(
     target_platform='rk3588',
-    input_size_list=[[1, 3, 640, 640]]
+    mean_values=[0,0,0],
+    std_values=[1,1,1],
+    dynamic_input=True
 )
 
 rknn.load_onnx(model=rf'YoloModels/v26/nano/clean_rknns/color-3.1-v26.onnx')
