@@ -6,7 +6,11 @@ rknn.config(
     target_platform='rk3588',
     mean_values=[0,0,0],
     std_values=[1,1,1],
-    dynamic_input=[[3, 640, 640]]
+    dynamic_input=[
+        [[1,3,640,640]],
+        [[1,3,512,512]],
+        [[1,3,320,320]],
+    ]
 )
 
 rknn.load_onnx(model=rf'YoloModels/v26/nano/clean_rknns/color-3.1-v26.onnx')
