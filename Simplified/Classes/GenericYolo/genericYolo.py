@@ -83,7 +83,8 @@ class YoloWrapper:
             batch_input = np.stack(processed, axis=0)
             
             raw_outputs = self.model.inference(inputs=[batch_input], data_format="nhwc")[0]
-            print(raw_outputs)
+            for i, out in enumerate(raw_outputs):
+                print(f"Output Head {i} shape: {out.shape}")
             results_list = [
                 self._convert_rknn_outputs(raw_outputs[i], frames[i].shape) 
                 for i in range(len(frames))
