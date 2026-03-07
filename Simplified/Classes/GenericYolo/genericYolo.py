@@ -4,7 +4,7 @@ import numpy as np
 from ultralytics import YOLO
 
 try:
-    from rknnlite.api import RKNNLite
+    from rknn.api import RKNN
     RKNN_FOUND = True
 except ImportError:
     RKNN_FOUND = None
@@ -37,13 +37,13 @@ class YoloWrapper:
         if model_file.endswith(".rknn"):
             if RKNN_FOUND is None:
                 self.logger.error(
-                    "Could node import RKNNLite. This could be because you meant to run a .pt or .onnx on a laptop, but if its the pi ur cooked."
+                    "Could node import RKNN. This could be because you meant to run a .pt or .onnx on a laptop, but if its the pi ur cooked."
                 )
                 raise ImportError(
-                    "Could node import RKNNLite. This could be because you meant to run a .pt or .onnx on a laptop, but if its the pi ur cooked."
+                    "Could node import RKNN. This could be because you meant to run a .pt or .onnx on a laptop, but if its the pi ur cooked."
                 )
             self.model_type = "rknn"
-            self.model = RKNNLite()
+            self.model = RKNN()
             ret = self.model.load_rknn(self.model_file)
             if ret != 0:
                 self.logger.error(f"Failed to load RKNN model: {self.model_file}")
