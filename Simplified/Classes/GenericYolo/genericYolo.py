@@ -4,7 +4,7 @@ import numpy as np
 from ultralytics import YOLO
 
 try:
-    from rknn.api import RKNN
+    from rknnlite.api import RKNNLite
     RKNN_FOUND = True
 except ImportError:
     RKNN_FOUND = None
@@ -43,7 +43,7 @@ class YoloWrapper:
                     "Could node import RKNN. This could be because you meant to run a .pt or .onnx on a laptop, but if its the pi ur cooked."
                 )
             self.model_type = "rknn"
-            self.model = RKNN()
+            self.model = RKNNLite()
             ret = self.model.load_rknn(self.model_file)
             if ret != 0:
                 self.logger.error(f"Failed to load RKNN model: {self.model_file}")
@@ -55,7 +55,7 @@ class YoloWrapper:
             # if ret != 0:
             #     raise ValueError(f"Failed to build RKNN model: {self.model_file}")
 
-            ret = self.model.init_runtime(target="rk3588", core_mask=RKNN.NPU_CORE_0)
+            ret = self.model.init_runtime(target="rk3588", core_mask=RKNNLite.NPU_CORE_0)
             if ret != 0:
                 self.logger.error(
                     f"Failed to initialize RKNN runtime for model: {self.model_file}"
