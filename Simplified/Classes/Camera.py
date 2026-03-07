@@ -8,7 +8,7 @@ import logging
 import sys
 from scipy.spatial.transform import Rotation
 import threading
-from GenericYolo.genericYolo import Box, Results, YoloWrapper
+from .GenericYolo.genericYolo import Box, Results, YoloWrapper
 
 class Camera:
     __slots__ = (
