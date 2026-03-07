@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 # Camera class
 camera = Camera(
-    0,
+    "/dev/video0",
     constants.CAMERA_FOV, constants.KNOWN_CALIBRATION_DISTANCE,
         constants.BALL_D_INCHES, constants.KNOWN_CALIBRATION_PIXEL_HEIGHT,
     constants.YOLO_MODEL_FILE,
