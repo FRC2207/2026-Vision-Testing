@@ -55,7 +55,7 @@ class YoloWrapper:
             # if ret != 0:
             #     raise ValueError(f"Failed to build RKNN model: {self.model_file}")
 
-            ret = self.model.init_runtime(target="rk3588", core_mask=RKNN.NPU_CORE_0_1_2)
+            ret = self.model.init_runtime(target="rk3588", core_mask=RKNN.NPU_CORE_0_1_2, device='/dev/dri/renderD128')
             if ret != 0:
                 self.logger.error(
                     f"Failed to initialize RKNN runtime for model: {self.model_file}"
@@ -82,7 +82,7 @@ class YoloWrapper:
             processed = [cv2.resize(f, self.input_size) for f in frames]
             batch_input = np.stack(processed, axis=0)
             
-            raw_outputs = self.model.inference(inputs=[batch_input], data_format="nhwc", device='/dev/dri/renderD128')[0]
+            raw_outputs = self.model.inference(inputs=[batch_input], data_format="nhwc")[0]
             print(raw_outputs)
             results_list = [
                 self._convert_rknn_outputs(raw_outputs[i], frames[i].shape) 
