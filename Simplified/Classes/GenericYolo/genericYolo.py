@@ -82,7 +82,7 @@ class YoloWrapper:
             processed = [cv2.resize(f, self.input_size) for f in frames]
             batch_input = np.stack(processed, axis=0)
             
-            raw_outputs = self.model.inference(inputs=[batch_input], data_format="nhwc")[0]
+            raw_outputs = self.model.inference(inputs=[batch_input], data_format="nhwc", device='/dev/dri/renderD128')[0]
             print(raw_outputs)
             results_list = [
                 self._convert_rknn_outputs(raw_outputs[i], frames[i].shape) 
