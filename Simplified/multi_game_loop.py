@@ -10,29 +10,50 @@ import logging
 import numpy as np
 from Classes.Fuel import Fuel
 from Classes.FuelTracker import FuelTracker
+from Classes.MultipleCameraHandler import MultipleCameraHandler
 
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    filemode="w", # Overwrite, don't append
-    filename="log.txt"
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    filemode="w",  # Overwrite, don't append
+    filename="log.txt",
 )
 
 logger = logging.getLogger(__name__)
 
 # Camera class
-camera = Camera(
+camera0 = Camera(
     0,
-    constants.CAMERA_FOV, constants.KNOWN_CALIBRATION_DISTANCE,
-        constants.BALL_D_INCHES, constants.KNOWN_CALIBRATION_PIXEL_HEIGHT,
+    constants.CAMERA_FOV,
+    constants.KNOWN_CALIBRATION_DISTANCE,
+    constants.BALL_D_INCHES,
+    constants.KNOWN_CALIBRATION_PIXEL_HEIGHT,
     constants.YOLO_MODEL_FILE,
-    constants.CAMERA_DOWNWARD_PITCH_ANGLE, constants.CAMERA_BOT_RELATIVE_YAW,
-    constants.CAMERA_HEIGHT,
-    constants.CAMERA_X_OFFSET,
-    constants.CAMERA_Y_OFFSET,
+    constants.CAMERA_CONFIGS[0]["pitch"],
+    constants.CAMERA_CONFIGS[0]["yaw"],
+    constants.CAMERA_CONFIGS[0]["height"],
+    constants.CAMERA_CONFIGS[0]["x"],
+    constants.CAMERA_CONFIGS[0]["y"],
     grayscale=constants.GRAYSCALE,
     debug_mode=constants.DEBUG_MODE,
-    subsystem="field"
+    subsystem="hopper",
+)
+
+camera1 = Camera(
+    1,
+    constants.CAMERA_FOV,
+    constants.KNOWN_CALIBRATION_DISTANCE,
+    constants.BALL_D_INCHES,
+    constants.KNOWN_CALIBRATION_PIXEL_HEIGHT,
+    constants.YOLO_MODEL_FILE,
+    constants.CAMERA_CONFIGS[1]["pitch"],
+    constants.CAMERA_CONFIGS[1]["yaw"],
+    constants.CAMERA_CONFIGS[1]["height"],
+    constants.CAMERA_CONFIGS[1]["x"],
+    constants.CAMERA_CONFIGS[1]["y"],
+    grayscale=constants.GRAYSCALE,
+    debug_mode=constants.DEBUG_MODE,
+    subsystem="hopper",
 )
 
 if constants.APP_MODE:
@@ -40,6 +61,7 @@ if constants.APP_MODE:
     threading.Thread(target=camera_app.run, daemon=True).start()
 
 network_handler = NetworkTableHandler(constants.NETWORKTABLES_IP)
+camera_handler = MultipleCameraHandler([camera0, camera1], constants.YOLO_MODEL_FILE)
 
 def numpy_to_fuel_list(fuel_positions):
     return [Fuel(p[0], p[1]) for p in fuel_positions]
@@ -49,17 +71,19 @@ def fuel_list_to_numpy(fuel_list: list[Fuel]):
 
 if __name__ == "__main__":
     try:
-        logger.info("Starting simplified, single-camera loop.")
+        logger.info("Starting simplified, multi-camera loop.")
 
         # Create planner
         try:
-            fuel_positions = fuel_list_to_numpy(camera.run())
+            fuel_positions = fuel_list_to_numpy(camera_handler.predict())
         except:
             fuel_positions = []
 
         planner = PathPlanner(
-            fuel_positions, constants.STARTING_POSITION,
-            constants.ELIPSON, constants.MIN_SAMPLES,
+            fuel_positions,
+            constants.STARTING_POSITION,
+            constants.ELIPSON,
+            constants.MIN_SAMPLES,
             debug_mode=constants.DEBUG_MODE,
         )
         fuel_tracker = FuelTracker(fuel_positions, constants.DISTANCE_THRESHOLD)
@@ -67,7 +91,7 @@ if __name__ == "__main__":
         i = 0
         while i < 1000:
             start_time = time.perf_counter()
-            fuel_positions = numpy_to_fuel_list(camera.run())
+            fuel_positions = numpy_to_fuel_list(camera_handler.predict())
 
             fuel_tracker.set_fuel_list(fuel_positions)
             fuel_tracker.sort()
@@ -84,16 +108,18 @@ if __name__ == "__main__":
                 pass
 
             if constants.APP_MODE:
-                frame = camera.get_frame()
+                frame = camera_handler.get_combined_frame()
                 camera_app.set_frame(frame)
 
-            _, fuel_positions = planner.update_fuel_positions(fuel_list_to_numpy(fuel_positions))
+            _, fuel_positions = planner.update_fuel_positions(
+                fuel_list_to_numpy(fuel_positions)
+            )
             network_handler.send_data(fuel_positions, "field_positions", "yolo_data")
 
             end_time = time.perf_counter()
-            est_fps = 1/(end_time - start_time)
+            est_fps = 1 / (end_time - start_time)
             logger.info(f"Loop run time: {end_time - start_time}. Est FPS: {est_fps}")
             # logger.info(f"Detected Fuel Positions: {[fuel_position for fuel_position in fuel_positions]}")
             i += 1
     finally:
-        camera.destroy()
+        camera_handler.destroy()

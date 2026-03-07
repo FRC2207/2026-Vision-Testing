@@ -47,3 +47,16 @@ for camera in data["cameras"]:
     CAMERA_HEIGHT = camera["height"]
     CAMERA_X_OFFSET = camera["x"]
     CAMERA_Y_OFFSET = camera["y"]
+
+CAMERA_CONFIGS = []
+
+for i, cam_data in enumerate(data["cameras"]):
+    config = {
+        "index": i,
+        "pitch": cam_data["downward_pitch"],
+        "yaw": cam_data["robot_relative_yaw"],
+        "height": cam_data["height"],
+        "x": cam_data["x"],
+        "y": cam_data["y"]
+    }
+    CAMERA_CONFIGS.append(config)

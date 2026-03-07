@@ -6,6 +6,13 @@
             "height": 4.25,
             "downward_pitch": 0,
             "robot_relative_yaw": 180
+        },
+        {
+            "x": 0,
+            "y": 0,
+            "height": 0,
+            "downward_pitch": 0,
+            "robot_relative_yaw": 0
         }
     ]
 }

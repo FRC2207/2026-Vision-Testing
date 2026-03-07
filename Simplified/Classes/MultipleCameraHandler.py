@@ -1,48 +1,32 @@
 from Classes.Camera import Camera
 import numpy as np
+from GenericYolo.genericYolo import Box, Results, YoloWrapper
 
 class MultipleCameraHandler:
-    def __init__(self, cameras: list[Camera]):
+    """This will only work if all cameras run the same vision model"""
+    def __init__(self, cameras: list[Camera], vision_model_path: str):
         self.cameras = cameras
-        self.model = cameras[0].model
-        self.last_mosaic = None
+        self.frames = []
 
-    def get_robot_relative_points(self):
-        tiles = []
-        for cam in self.cameras:
-            ret, frame = cam.cap.read()
-            if not ret:
-                frame = np.zeros((480, 640, 3), np.uint8)
-            tiles.append(cv2.resize(frame, (320, 320)))
+        self.vision_model_path = vision_model_path
+        self.model = YoloWrapper(self.vision_model_path)
 
-        top = np.hstack((tiles[0], tiles[1]))
-        bottom = np.hstack((tiles[2], tiles[3]))
-        self.last_mosaic = np.vstack((top, bottom))
-
-        results = self.model.predict(self.last_mosaic)
+    def predict(self):
+        frames = [cam.get_frame() for cam in self.cameras]
         
-        map_points = []
-        for box in results.boxes:
-            x1, y1, x2, y2 = box.xyxy
-            if box.conf < self.cameras[0].min_confidence:
-                continue
+        results = self.model.predict(frames)
+        feild_positions = []
+        for i, result in enumerate(results):
+            feild_positions.extend(self.cameras[i].run_with_supplied_data(result))
 
-            cx, cy = (x1 + x2) / 2.0, (y1 + y2) / 2.0
-            
-            col = 1 if cx > 320 else 0
-            row = 1 if cy > 320 else 0
-            idx = row * 2 + col
-            
-            if idx < len(self.cameras):
-                cam = self.cameras[idx]
-                
-                tile_cx = cx - (col * 320)
-                tile_cy = cy - (row * 320)
-                tile_w = x2 - x1
-                tile_h = y2 - y1
+        return feild_positions
+    
+    def get_combined_frame(self):
+        frames = [cam.get_frame() for cam in self.cameras]
 
-                point = cam.calculate_from_mosaic(tile_cx, tile_cy, tile_w, tile_h)
-                if point is not None:
-                    map_points.append(point)
-
-        return np.array(map_points) if map_points else np.empty((0, 2))
+        combined_frame = np.hstack(frames)
+        return combined_frame
+    
+    def destroy(self):
+        for cam in self.cameras:
+            cam.destroy()
