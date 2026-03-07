@@ -1,0 +1,13 @@
+# Only install this on a linux machine
+numpy==1.26.4
+onnx==1.16.1
+onnxruntime==1.18.0
+torch==2.1.0
+torchvision==0.16.0
+opencv-python
+protobuf==3.20.3
+psutil
+scipy
+requests
+tqdm
+rknn-toolkit2

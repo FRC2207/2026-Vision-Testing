@@ -1,3 +1,4 @@
+# Libraries needed to run the code, install this on the orange pi 5
 opencv-python
 ultralytics
 torch
