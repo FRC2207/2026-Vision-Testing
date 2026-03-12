@@ -67,7 +67,7 @@ class Camera:
 
         self.last_time = time.perf_counter()
 
-        self.cap = cv2.VideoCapture(self.source, cv2.CAP_V4L2)
+        self.cap = cv2.VideoCapture(self.source)
         self.stopped = False
         self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
         # self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
@@ -83,14 +83,13 @@ class Camera:
         ) / self.ball_d_inches
 
         self.model = YoloWrapper(self.yolo_model_file)
-        # self.frame_lock = threading.Lock()
+        self.frame_lock = threading.Lock()
         self.ret, self.frame = self.cap.read()
         threading.Thread(target=self._reader, daemon=True).start()
 
     def _reader(self):
         while not self.stopped:
-            self.cap.grab()
-            ret, frame = self.cap.retrieve()
+            ret, frame = self.cap.read()
             if not ret:
                 self.logger.warning(f"Failed to retrieve frame from, attempting to continue: {self.source}")
                 # raise ValueError(f"Failed to retrieve frame from: {self.source}")
@@ -99,18 +98,23 @@ class Camera:
                 frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
                 frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)  # Restore 3 channels, it wil still be gray tho
 
-            # with self.frame_lock:
-                # self.frame = frame
-            self.frame = frame
+            if np.mean(frame) < 1: 
+                self.logger.debug("Frame is a solid color, skipping...")
+                continue
+
+            with self.frame_lock:
+                self.frame = frame
+                
+            # self.frame = frame
 
             time.sleep(0.01) # Help not overuse CPU
 
     def get_frame(self):
-        # with self.frame_lock:
-            # if self.frame is None:
-            #     return None
-            # return self.frame.copy()
-        return self.frame
+        with self.frame_lock:
+            if self.frame is None:
+                return None
+            return self.frame.copy()
+        # return self.frame
         
     def _preprocess_for_rknn(self, frame):
         if frame is not None:
