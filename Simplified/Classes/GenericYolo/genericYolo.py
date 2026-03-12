@@ -114,6 +114,11 @@ class YoloWrapper:
         # 1. Assuming index 4 IS your confidence column (even if it currently shows 0.0)
         # Apply Sigmoid to turn raw model output into a probability
         confidences = self._sigmoid(frame_output[:, 4]) 
+        col_mins = np.min(frame_output, axis=0)
+        col_maxs = np.max(frame_output, axis=0)
+        
+        self.logger.info(f"Col Mins: {col_mins}")
+        self.logger.info(f"Col Maxs: {col_maxs}")
         
         # 2. Check the raw values BEFORE sigmoid
         self.logger.info(f"Raw Logit (col 4): {frame_output[0, 4]}")
