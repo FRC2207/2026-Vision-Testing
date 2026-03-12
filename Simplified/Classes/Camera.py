@@ -90,6 +90,7 @@ class Camera:
     def _reader(self):
         self.logger.info(f"self.stopped: {self.stopped}")
         while not self.stopped:
+            self.logger.debug("Attempting to grab frame.")
             ret, frame = self.cap.read()
             self.logger.debug(f"Frame grabbed: {frame}")
             if not ret:
