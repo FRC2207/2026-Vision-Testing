@@ -7,12 +7,11 @@ import time
 class CameraApp:
     def __init__(self):
         self.app = Flask(__name__)
-        self.current_frame = None
+        self.current_frame = np.zeros((480, 640, 3), dtype=np.uint8)
         self.frame_lock = threading.Lock()
         
         self.app.add_url_rule('/video_feed', 'video_feed', self.video_feed)
         self.app.add_url_rule('/', 'index', self.index)
-        self.set_frame(np.zeros((480, 640, 3), dtype=np.uint8))
     
     def set_frame(self, frame):
         with self.frame_lock:
