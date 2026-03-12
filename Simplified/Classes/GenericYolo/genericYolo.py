@@ -87,6 +87,8 @@ class YoloWrapper:
             batch_input = batch_input.transpose(0, 3, 1, 2)
 
             batch_input = np.ascontiguousarray(batch_input, dtype=np.uint8)
+            self.logger.debug("Batch input shape:", batch_input.shape)
+            self.logger.debug("Input tensor info:", self.model.get_input_tensor())
 
             # Run inference
             raw_outputs = self.model.inference(inputs=[batch_input])
