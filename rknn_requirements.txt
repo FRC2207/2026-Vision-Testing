@@ -1,14 +1,12 @@
 # This is for .pt to .rknn conversion
 # Do this on linux, NOT windows. Use python 3.10.
 # Also, run pip install RknnWheels/rknn_toolkit2-2.0.0-py3-none-any.whl
-numpy
-onnx
-onnxruntime
-torch
-torchvision
-opencv-python
-protobuf
+torch==2.4.0
+onnx==1.20.1
+onnxruntime==1.23.2
+opencv-python==4.11.0.86
+numpy>=1.26
+scipy>=1.15
 psutil
-scipy
-requests
 tqdm
+requests
