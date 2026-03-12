@@ -94,8 +94,8 @@ class YoloWrapper:
                 raw_outputs = self.model.inference(inputs=[frame])
                 # self.logger.info("Ran inference.")
                 output_tensor = raw_outputs[0][0]
-                self.logger.info(f"Output: {output_tensor}")
-                self.logger.info(f"Raw output: {raw_outputs}")
+                # self.logger.info(f"Output: {output_tensor}")
+                # self.logger.info(f"Raw output: {raw_outputs}")
 
                 results_list.append(
                     self._convert_rknn_outputs(
