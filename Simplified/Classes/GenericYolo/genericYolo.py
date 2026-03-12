@@ -82,7 +82,7 @@ class YoloWrapper:
             )
 
     def predict(self, frame_or_frames) -> list[Results]:
-        self.logger.debug("Predict function called.")
+        self.logger.info("Predict function called.")
         is_list = isinstance(frame_or_frames, list)
         frames = frame_or_frames if is_list else [frame_or_frames]
 
@@ -91,7 +91,7 @@ class YoloWrapper:
         if self.model_type == "rknn":
             for frame in frames:
                 # Inference
-                self.logger.debug(frame.shape, frame.dtype)
+                self.logger.info(frame.shape, frame.dtype)
                 raw_outputs = self.model.inference(inputs=[frame])
                 output_tensor = raw_outputs[0][0]
 
