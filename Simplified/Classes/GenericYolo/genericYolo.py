@@ -67,6 +67,13 @@ class YoloWrapper:
         elif model_file.endswith(".onnx") or model_file.endswith(".pt") or model_file.endswith("openvino_model"):
             self.model_type = "yolo"
             self.model = YOLO(self.model_file, verbose=False, task="detect")
+
+            dummy = np.zeros((3, 320, 320), dtype=np.uint8)
+            try:
+                outputs = self.model.inference(inputs=[dummy])
+                self.logger.info("RKNN dummy inference passed!")
+            except Exception as e:
+                self.logger.error("RKNN dummy inference failed:", e)
         else:
             self.logger.error(
                 f"Unsupported model file type: {self.model_file}. Check constants and spelling blud."
@@ -90,6 +97,7 @@ class YoloWrapper:
                 img = np.ascontiguousarray(img)
 
                 # inference
+                self.logger.debug(img.shape, img.dtype)
                 raw_outputs = self.model.inference(inputs=[img])
                 output_tensor = raw_outputs[0][0]
 
