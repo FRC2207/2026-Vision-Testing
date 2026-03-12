@@ -88,6 +88,7 @@ class Camera:
         threading.Thread(target=self._reader, daemon=True).start()
 
     def _reader(self):
+        self.logger.info(f"self.stopped: {self.stopped}")
         while not self.stopped:
             ret, frame = self.cap.read()
             self.logger.debug(f"Frame grabbed: {frame}")
