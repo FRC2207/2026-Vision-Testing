@@ -67,7 +67,7 @@ class Camera:
 
         self.last_time = time.perf_counter()
 
-        self.cap = cv2.VideoCapture(self.source)
+        self.cap = cv2.VideoCapture(self.source, cv2.CAP_V4L2)
         self.stopped = False
         self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
         # self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
