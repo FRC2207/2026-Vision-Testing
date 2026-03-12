@@ -69,7 +69,6 @@ class Camera:
 
         self.cap = cv2.VideoCapture(self.source)
         self.stopped = False
-        self.ret, self.frame = self.cap.read()
         self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
         # self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
         # self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
@@ -85,6 +84,7 @@ class Camera:
 
         self.model = YoloWrapper(self.yolo_model_file)
         self.frame_lock = threading.Lock()
+        self.ret, self.frame = self.cap.read()
         threading.Thread(target=self._reader, daemon=True).start()
 
     def _reader(self):
