@@ -115,6 +115,7 @@ class Camera:
     def get_frame(self):
         with self.frame_lock:
             if self.frame is None:
+                self.logger.warning(f"self.frame was None")
                 return None
             return self.frame.copy()
         # return self.frame
@@ -131,6 +132,7 @@ class Camera:
             return None
 
     def get_yolo_data(self):
+        self.logger.info("Calling: self.get_frame()")
         frame = self.get_frame()
 
         if frame is None:
