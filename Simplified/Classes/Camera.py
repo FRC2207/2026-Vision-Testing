@@ -117,6 +117,7 @@ class Camera:
             if self.frame is None:
                 self.logger.warning(f"self.frame was None")
                 return None
+            self.logger.info(self.frame.copy())
             return self.frame.copy()
         # return self.frame
         
