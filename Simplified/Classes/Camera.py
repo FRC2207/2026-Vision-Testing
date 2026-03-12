@@ -233,9 +233,9 @@ class Camera:
 
         map_points = []
 
-        self.logger.info(f"Boxes: {data.boxes}")
+        self.logger.info(f"Boxes: {data[0].boxes}")
 
-        for box in data.boxes:
+        for box in data[0].boxes:
             self.logger.info("Iterating through each box.")
             x1, y1, x2, y2 = box.xyxy
             w_pixels = x2 - x1
