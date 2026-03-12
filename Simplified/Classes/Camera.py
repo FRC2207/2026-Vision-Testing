@@ -233,12 +233,16 @@ class Camera:
 
         map_points = []
 
+        self.logger.info(f"Boxes: {data.boxes}")
+
         for box in data.boxes:
             self.logger.info("Iterating through each box.")
             x1, y1, x2, y2 = box.xyxy
             w_pixels = x2 - x1
             h_pixels = y2 - y1
             conf = box.conf
+
+            self.logger.info(f"Box: ({x1:.1f}, {y1:.1f}) to ({x2:.1f}, {y2:.1f}), Conf: {conf:.3f}")
 
             # Only accept things with a high enough confidence
             if conf < self.min_confidence:
