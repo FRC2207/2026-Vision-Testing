@@ -111,20 +111,28 @@ class YoloWrapper:
         return results_list if is_list else results_list[0]
 
     def _convert_rknn_outputs(self, frame_output, orig_shape):
-        self.logger.info(f"ENTIRE ROW: {frame_output[0]}")
-    
-        # Do NOT mask yet. Just take the first 5 boxes and print all their values
-        for i in range(5):
-            self.logger.info(f"Row {i}: {frame_output[i]}")
+        # 1. Assuming index 4 IS your confidence column (even if it currently shows 0.0)
+        # Apply Sigmoid to turn raw model output into a probability
+        confidences = self._sigmoid(frame_output[:, 4]) 
         
-        valid = frame_output[:5] 
+        # 2. Check the raw values BEFORE sigmoid
+        self.logger.info(f"Raw Logit (col 4): {frame_output[0, 4]}")
+        self.logger.info(f"Sigmoid Confidence: {confidences[0]}")
         
-        boxes = [Box(list(map(float, b[:4])), float(b[4])) for b in valid]
+        # 3. Use the probability for your mask
+        mask = confidences > 0.5
+        valid = frame_output[mask]
+        
+        # 4. Create Box objects
+        boxes = [Box(list(map(float, b[:4])), float(confidences[i])) for i, b in enumerate(frame_output) if mask[i]]
         return Results(boxes, orig_shape)
 
     def _convert_ultralytics_to_results(self, ultralytics_result):
         boxes = [Box(list(b.xyxy[0]), float(b.conf[0])) for b in ultralytics_result.boxes]
         return Results(boxes, ultralytics_result.orig_shape)
+
+    def _sigmoid(x):
+        return 1 / (1 + np.exp(-x))
 
     def release(self):
         if self.model_type == "rknn":
