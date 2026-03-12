@@ -100,5 +100,7 @@ if __name__ == "__main__":
             logger.info(f"Loop run time: {end_time - start_time}. Est FPS: {est_fps}")
             # logger.info(f"Detected Fuel Positions: {[fuel_position for fuel_position in fuel_positions]}")
             i += 1
+    except Exception as e:
+        logger.error(f"Error: {e}")
     finally:
         camera.destroy()
