@@ -90,15 +90,9 @@ class YoloWrapper:
 
         if self.model_type == "rknn":
             for frame in frames:
-                # Preprocess
-                img = cv2.resize(frame, self.input_size)
-                img = img.astype(np.uint8)
-                img = img[None, :, :, :]
-                img = np.ascontiguousarray(img)
-
                 # Inference
-                self.logger.debug(img.shape, img.dtype)
-                raw_outputs = self.model.inference(inputs=[img])
+                self.logger.debug(frame.shape, frame.dtype)
+                raw_outputs = self.model.inference(inputs=[frame])
                 output_tensor = raw_outputs[0][0]
 
                 results_list.append(
@@ -107,7 +101,6 @@ class YoloWrapper:
                         frame.shape
                     )
                 )
-
         else:
             results = self.model(frames, verbose=False, imgsz=self.input_size[0])
             results_list = [self._convert_ultralytics_to_results(r) for r in results]
