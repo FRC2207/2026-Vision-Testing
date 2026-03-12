@@ -88,7 +88,7 @@ if __name__ == "__main__":
 
             if constants.APP_MODE:
                 frame = camera.get_frame()
-                if not frame:
+                if frame is None:
                     logger.warning("Frame not returned from camera.get_frame()")
                 else:
                     camera_app.set_frame(frame)
