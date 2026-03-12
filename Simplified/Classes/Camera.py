@@ -90,6 +90,7 @@ class Camera:
     def _reader(self):
         while not self.stopped:
             ret, frame = self.cap.read()
+            self.logger.debug(f"Frame grabbed: {frame}")
             if not ret:
                 self.logger.warning(f"Failed to retrieve frame from, attempting to continue: {self.source}")
                 # raise ValueError(f"Failed to retrieve frame from: {self.source}")
