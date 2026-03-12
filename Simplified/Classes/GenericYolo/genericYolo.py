@@ -111,29 +111,13 @@ class YoloWrapper:
         return results_list if is_list else results_list[0]
 
     def _convert_rknn_outputs(self, frame_output, orig_shape):
-        # 1. Inspect the shape to be sure
+        self.logger.info(f"Full row: {frame_output[0]}")
         self.logger.info(f"Frame output shape before transpose: {frame_output.shape}")
         self.logger.info(f"Sample row: {frame_output[0]}")
-        
-        # 2. Transpose if the '6' is the first dimension
-        # If shape is (6, 8400), it becomes (8400, 6)
-        if frame_output.shape[0] == 6 or frame_output.shape[0] == 5:
-            frame_output = frame_output.T
-            
-        # 3. Now frame_output is (N, 6)
-        # Assuming index 4 is confidence (check your specific model's output!)
-        conf_threshold = 0.5
-        mask = frame_output[:, 4] > conf_threshold
+        mask = frame_output[:, 4] > 0.5
         valid = frame_output[mask]
-        
-        # 4. Create Box objects
-        boxes = []
-        for b in valid:
-            # b is [x1, y1, x2, y2, conf, class_id]
-            # Ensure your model actually outputs xyxy. If it outputs cx,cy,w,h,
-            # you need to convert it here!
-            boxes.append(Box(b[:4], float(b[4])))
-            
+
+        boxes = [Box(list(map(float, b[:4])), float(b[4])) for b in valid]
         return Results(boxes, orig_shape)
 
     def _convert_ultralytics_to_results(self, ultralytics_result):
