@@ -131,7 +131,7 @@ class YoloWrapper:
         boxes = [Box(list(b.xyxy[0]), float(b.conf[0])) for b in ultralytics_result.boxes]
         return Results(boxes, ultralytics_result.orig_shape)
 
-    def _sigmoid(x):
+    def _sigmoid(self, x):
         return 1 / (1 + np.exp(-x))
 
     def release(self):
