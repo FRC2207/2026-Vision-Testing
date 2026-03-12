@@ -84,7 +84,7 @@ class YoloWrapper:
     def predict(self, frame_or_frames) -> list[Results]:
         is_list = isinstance(frame_or_frames, list)
         frames = frame_or_frames if is_list else [frame_or_frames]
-        self.logger.log(f"Running with is_list: {is_list}")
+        self.logger.info(f"Running with is_list: {is_list}")
 
         results_list = []
 
