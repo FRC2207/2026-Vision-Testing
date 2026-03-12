@@ -144,6 +144,7 @@ class Camera:
             self.logger.warning("Preprocessing failed; skipping prediction")
             return None, frame
         
+        self.logger.info("Calling self.model.predict(frame_preprocessed)")
         results = self.model.predict(frame_preprocessed)
 
         annotated_frame = frame.copy()
