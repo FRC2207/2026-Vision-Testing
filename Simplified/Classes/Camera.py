@@ -242,7 +242,7 @@ class Camera:
             h_pixels = y2 - y1
             conf = box.conf
 
-            self.logger.info(f"Box: ({x1:.1f}, {y1:.1f}) to ({x2:.1f}, {y2:.1f}), Conf: {conf:.3f}")
+            # self.logger.info(f"Box: ({x1:.1f}, {y1:.1f}) to ({x2:.1f}, {y2:.1f}), Conf: {conf:.3f}")
 
             # Only accept things with a high enough confidence
             if conf < self.min_confidence:
