@@ -3,7 +3,7 @@ import json
 
 # Got around 20 fps, need to optimize. 21 with __slots__
 
-DEBUG_MODE = True
+DEBUG_MODE = False
 APP_MODE = True
 
 #######################################################################
