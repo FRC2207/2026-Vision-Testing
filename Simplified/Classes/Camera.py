@@ -17,7 +17,8 @@ class Camera:
         'grayscale', 'yolo_model_file', 'camera_pitch_angle', 'camera_height',
         'camera_x', 'camera_y', 'camera_bot_relative_yaw', 'debug_mode',
         'ball_count', 'gui_available', 'logger', 'last_time', 'cap',
-        'focal_length_pixels', 'model', 'ret', 'frame', "__dict__"
+        'focal_length_pixels', 'model', 'ret', 'frame',
+        'frame_lock', 'stopped',
     )
 
     def __init__(
@@ -69,7 +70,7 @@ class Camera:
         self.cap = cv2.VideoCapture(self.source)
         self.stopped = False
         self.ret, self.frame = self.cap.read()
-        # self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+        self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
         # time.sleep(0.5)
 
         if not self.cap.isOpened():
@@ -81,6 +82,7 @@ class Camera:
         ) / self.ball_d_inches
 
         self.model = YoloWrapper(self.yolo_model_file)
+        self.frame_lock = threading.Lock()
         threading.Thread(target=self._reader, daemon=True).start()
 
     def _reader(self):
@@ -93,16 +95,15 @@ class Camera:
                 frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
                 frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)  # Restore 3 channels, it wil still be gray tho
 
-            self.frame = frame
+            with self.frame_lock:
+                self.frame = frame
 
     def get_frame(self):
-        return self.frame
+        with self.frame_lock:
+            return self.frame.copy()
 
     def get_yolo_data(self):
         frame = self.get_frame()
-        # If grayscale, convert back to 3 channels for YOLO model
-        if self.grayscale:
-            frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
 
         results = self.model.predict(frame)
 

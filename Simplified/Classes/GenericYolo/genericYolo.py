@@ -56,6 +56,7 @@ class YoloWrapper:
             #     raise ValueError(f"Failed to build RKNN model: {self.model_file}")
 
             ret = self.model.init_runtime(core_mask=RKNNLite.NPU_CORE_0)
+            # core_mask=RKNNLite.NPU_CORE_0_1_2 use for all NPU usage
             if ret != 0:
                 self.logger.error(
                     f"Failed to initialize RKNN runtime for model: {self.model_file}"
@@ -73,7 +74,7 @@ class YoloWrapper:
             raise ValueError(
                 f"Unsupported model file type: {self.model_file}. Check constants and spelling blud."
             )
-
+        
     def predict(self, frame_or_frames) -> list[Results]:
         is_list = isinstance(frame_or_frames, list)
         frames = frame_or_frames if is_list else [frame_or_frames]
@@ -81,39 +82,25 @@ class YoloWrapper:
         results_list = []
 
         if self.model_type == "rknn":
-            # Preprocess all frames
-            processed = [cv2.resize(f, self.input_size) for f in frames]
-            batch_input = np.stack(processed, axis=0)  # NHWC batch
+            for frame in frames:
+                # preprocess
+                img = cv2.resize(frame, self.input_size)
+                img = np.expand_dims(img, axis=0)
+                img = np.ascontiguousarray(img, dtype=np.uint8)
 
-            # Convert NHWC -> NCHW
-            batch_input = batch_input.transpose(0, 3, 1, 2)
-            batch_input = np.ascontiguousarray(batch_input, dtype=np.uint8)
-            self.logger.debug(f"Batch input shape: {batch_input.shape}")
+                # inference
+                raw_outputs = self.model.inference(inputs=[img])
+                output_tensor = raw_outputs[0][0]
 
-            # Check model input batch size
-            try:
-                input_shape = self.model.get_input_tensor_shape(0)
-                max_batch = input_shape[0] if input_shape[0] != -1 else len(frames)
-            except AttributeError:
-                # If get_input_tensor_shape not available, assume static batch=1
-                max_batch = 1
+                # convert to Results object
+                results_list.append(
+                    self._convert_rknn_outputs(
+                        output_tensor,
+                        frame.shape
+                    )
+                )
 
-            # Split into chunks if model doesn't support dynamic batch
-            start = 0
-            while start < len(frames):
-                end = start + max_batch
-                chunk = batch_input[start:end]
-
-                raw_outputs = self.model.inference(inputs=[chunk])
-                output_tensor = raw_outputs[0]
-
-                for i in range(len(chunk)):
-                    frame_output = output_tensor[i]  # select per-frame output
-                    results_list.append(self._convert_rknn_outputs(frame_output, frames[start + i].shape))
-
-                start = end
-
-        else:  # Ultralytics YOLO (pt / onnx / openvino)
+        else:
             results = self.model(frames, verbose=False, imgsz=320)
             results_list = [self._convert_ultralytics_to_results(r) for r in results]
 
