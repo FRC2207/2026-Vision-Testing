@@ -86,7 +86,10 @@ if __name__ == "__main__":
 
             if constants.APP_MODE:
                 frame = camera.get_frame()
-                camera_app.set_frame(frame)
+                if not frame:
+                    logger.warning("Frame not returned from camera.get_frame()")
+                else:
+                    camera_app.set_frame(frame)
 
             _, fuel_positions = planner.update_fuel_positions(fuel_list_to_numpy(fuel_positions))
             if constants.USE_NETWORK_TABLES:
