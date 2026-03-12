@@ -79,10 +79,13 @@ class YoloWrapper:
         frames = frame_or_frames if is_list else [frame_or_frames]
 
         if self.model_type == "rknn":
-            # Resize frames to model input size
             processed = [cv2.resize(f, self.input_size) for f in frames]
 
             batch_input = np.stack(processed, axis=0)
+
+            # Convert NHWC -> NCHW
+            batch_input = batch_input.transpose(0, 3, 1, 2)
+
             batch_input = np.ascontiguousarray(batch_input, dtype=np.uint8)
 
             # Run inference
