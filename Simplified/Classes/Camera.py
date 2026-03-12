@@ -11,15 +11,15 @@ import threading
 from .GenericYolo.genericYolo import Box, Results, YoloWrapper
 
 class Camera:
-    __slots__ = (
-        'source', 'camera_fov', 'known_calibration_distance', 'ball_d_inches',
-        'known_calibration_pixel_height', 'subsystem', 'margin', 'min_confidence',
-        'grayscale', 'yolo_model_file', 'camera_pitch_angle', 'camera_height',
-        'camera_x', 'camera_y', 'camera_bot_relative_yaw', 'debug_mode',
-        'ball_count', 'gui_available', 'logger', 'last_time', 'cap',
-        'focal_length_pixels', 'model', 'ret', 'frame',
-        'frame_lock', 'stopped',
-    )
+    # __slots__ = (
+    #     'source', 'camera_fov', 'known_calibration_distance', 'ball_d_inches',
+    #     'known_calibration_pixel_height', 'subsystem', 'margin', 'min_confidence',
+    #     'grayscale', 'yolo_model_file', 'camera_pitch_angle', 'camera_height',
+    #     'camera_x', 'camera_y', 'camera_bot_relative_yaw', 'debug_mode',
+    #     'ball_count', 'gui_available', 'logger', 'last_time', 'cap',
+    #     'focal_length_pixels', 'model', 'ret', 'frame',
+    #     'frame_lock', 'stopped',
+    # )
 
     def __init__(
         self,
