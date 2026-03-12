@@ -229,14 +229,14 @@ class Camera:
             return np.empty((0, 2))
 
         img_h, img_w = frame.shape[:2]
-        self.logger.info(f"img_h: {img_h}, img_w: {img_w}")
+        # self.logger.info(f"img_h: {img_h}, img_w: {img_w}")
 
         map_points = []
 
-        self.logger.info(f"Boxes: {data.boxes}")
+        # self.logger.info(f"Boxes: {data.boxes}")
 
         for box in data.boxes:
-            self.logger.info("Iterating through each box.")
+            # self.logger.info("Iterating through each box.")
             x1, y1, x2, y2 = box.xyxy
             w_pixels = x2 - x1
             h_pixels = y2 - y1
