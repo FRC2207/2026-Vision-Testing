@@ -9,7 +9,7 @@ rknn.config(
     disable_rules=['fuse_exmatmul_add_mul_exsoftmax13_exmatmul_to_sdpa']
 )
 
-rknn.load_onnx(model=r'YoloModels/v26/nano/clean_rknn/color-3.1-v26.onnx')
+rknn.load_onnx(model=r'YoloModels/v26/nano/clean_rknn/color-3.1-v26.onnx', input_size_list=[[1,640,640,3]])
 
 rknn.build(
     do_quantization=True,
