@@ -85,8 +85,9 @@ class YoloWrapper:
             for frame in frames:
                 # preprocess
                 img = cv2.resize(frame, self.input_size)
-                img = np.expand_dims(img, axis=0)
-                img = np.ascontiguousarray(img, dtype=np.uint8)
+                img = img.astype(np.uint8)
+                img = img[None, :, :, :]
+                img = np.ascontiguousarray(img)
 
                 # inference
                 raw_outputs = self.model.inference(inputs=[img])
