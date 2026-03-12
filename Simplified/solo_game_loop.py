@@ -68,7 +68,7 @@ if __name__ == "__main__":
         i = 0
         while i < 500:
             start_time = time.perf_counter()
-            logger.info("Running: camera.run()")
+            # logger.info("Running: camera.run()")
             fuel_positions = numpy_to_fuel_list(camera.run())
 
             fuel_tracker.set_fuel_list(fuel_positions)

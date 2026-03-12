@@ -237,13 +237,16 @@ class Camera:
 
             # Only accept things with a high enough confidence
             if conf < self.min_confidence:
+                self.logger.info("Skipping detection due to low confidence.")
                 continue
             # Only accept boxes that are in the margin
             if x1 < self.margin or y1 < self.margin or x2 > (img_w - self.margin):
+                self.logger.info("Skipping detection due to margin.")
                 continue
             aspect_ratio = w_pixels / h_pixels
             # Only accept boxes that are roughly square
             if not (0.8 <= aspect_ratio <= 1.2):
+                self.logger.info("Skipping detection due to rectangular shape.")
                 continue
 
             cx = (x1 + x2) / 2.0
