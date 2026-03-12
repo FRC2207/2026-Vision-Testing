@@ -231,6 +231,7 @@ class Camera:
         map_points = []
 
         for box in data.boxes:
+            self.logger.info("Iterating through each box.")
             x1, y1, x2, y2 = box.xyxy
             w_pixels = x2 - x1
             h_pixels = y2 - y1
