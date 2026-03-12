@@ -39,7 +39,8 @@ if constants.APP_MODE:
     camera_app = CameraApp()
     threading.Thread(target=camera_app.run, daemon=True).start()
 
-network_handler = NetworkTableHandler(constants.NETWORKTABLES_IP)
+if constants.USE_NETWORK_TABLES:
+    network_handler = NetworkTableHandler(constants.NETWORKTABLES_IP)
 
 def numpy_to_fuel_list(fuel_positions):
     return [Fuel(p[0], p[1]) for p in fuel_positions]
@@ -88,7 +89,8 @@ if __name__ == "__main__":
                 camera_app.set_frame(frame)
 
             _, fuel_positions = planner.update_fuel_positions(fuel_list_to_numpy(fuel_positions))
-            network_handler.send_data(fuel_positions, "field_positions", "yolo_data")
+            if constants.USE_NETWORK_TABLES:
+                network_handler.send_data(fuel_positions, "field_positions", "yolo_data")
 
             end_time = time.perf_counter()
             est_fps = 1/(end_time - start_time)

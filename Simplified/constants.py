@@ -5,6 +5,7 @@ import json
 
 DEBUG_MODE = False
 APP_MODE = True
+USE_NETWORK_TABLES = False # Obvisouly shuold be set to true for game, but testing set to False
 
 #######################################################################
 # Custom PathPlanner Stuff
