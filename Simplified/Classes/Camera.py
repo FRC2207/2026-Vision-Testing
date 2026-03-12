@@ -109,9 +109,19 @@ class Camera:
             if self.frame is None:
                 return None
             return self.frame.copy()
+        
+    def _preprocess_for_rknn(self, frame):
+        img = cv2.resize(frame, (640, 640))
+        img = img.astype(np.uint8)
+        img = np.ascontiguousarray(img)
+        img = img[None, :, :, :]
+        return img
 
     def get_yolo_data(self):
         frame = self.get_frame()
+        frame = self.get_frame()
+        frame_preprocessed = self._preprocess_for_rknn(frame)
+        results = self.model.predict(frame_preprocessed)
 
         results = self.model.predict(frame)
 
