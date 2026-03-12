@@ -78,38 +78,47 @@ class YoloWrapper:
         is_list = isinstance(frame_or_frames, list)
         frames = frame_or_frames if is_list else [frame_or_frames]
 
-        if self.model_type == "rknn":
-            processed = [cv2.resize(f, self.input_size) for f in frames]
+        results_list = []
 
-            batch_input = np.stack(processed, axis=0)
+        if self.model_type == "rknn":
+            # Preprocess all frames
+            processed = [cv2.resize(f, self.input_size) for f in frames]
+            batch_input = np.stack(processed, axis=0)  # NHWC batch
 
             # Convert NHWC -> NCHW
             batch_input = batch_input.transpose(0, 3, 1, 2)
-
             batch_input = np.ascontiguousarray(batch_input, dtype=np.uint8)
-            self.logger.debug("Batch input shape:", batch_input.shape)
+            self.logger.debug(f"Batch input shape: {batch_input.shape}")
 
-            # Run inference
-            raw_outputs = self.model.inference(inputs=[batch_input])
+            # Check model input batch size
+            try:
+                input_shape = self.model.get_input_tensor_shape(0)
+                max_batch = input_shape[0] if input_shape[0] != -1 else len(frames)
+            except AttributeError:
+                # If get_input_tensor_shape not available, assume static batch=1
+                max_batch = 1
 
-            self.logger.debug(f"DEBUG: Number of output heads: {len(raw_outputs)}")
+            # Split into chunks if model doesn't support dynamic batch
+            start = 0
+            while start < len(frames):
+                end = start + max_batch
+                chunk = batch_input[start:end]
 
-            output_tensor = raw_outputs[0]
+                raw_outputs = self.model.inference(inputs=[chunk])
+                output_tensor = raw_outputs[0]
 
-            results_list = []
+                for i in range(len(chunk)):
+                    frame_output = output_tensor[i]  # select per-frame output
+                    results_list.append(self._convert_rknn_outputs(frame_output, frames[start + i].shape))
 
-            for i in range(len(frames)):
-                frame_output = output_tensor[i]  # select batch slice
-                results_list.append(
-                    self._convert_rknn_outputs(frame_output, frames[i].shape)
-                )
+                start = end
 
         else:  # Ultralytics YOLO (pt / onnx / openvino)
             results = self.model(frames, verbose=False, imgsz=320)
             results_list = [self._convert_ultralytics_to_results(r) for r in results]
 
         return results_list if is_list else results_list[0]
-
+    
     def _convert_rknn_outputs(self, frame_output, orig_shape):
         mask = frame_output[:, 4] > 0.5
         valid = frame_output[mask]
