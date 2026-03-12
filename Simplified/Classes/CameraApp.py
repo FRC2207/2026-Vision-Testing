@@ -20,17 +20,24 @@ class CameraApp:
     
     def generate_frames(self):
         while True:
+            start_time = time.time()
             with self.frame_lock:
                 if self.current_frame is None:
                     time.sleep(0.01)
                     continue
                 frame = self.current_frame.copy()
-            
+
             ret, buffer = cv2.imencode('.jpg', frame)
+            if not ret:
+                continue
             frame_bytes = buffer.tobytes()
-            
+
             yield (b'--frame\r\n'
-                   b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
+                b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
+
+            # Limit to roughly 10 fps
+            elapsed = time.time() - start_time
+            time.sleep(max(0, 0.1 - elapsed))
     
     def video_feed(self):
         return Response(self.generate_frames(),
