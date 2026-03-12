@@ -65,8 +65,9 @@ if __name__ == "__main__":
         )
         fuel_tracker = FuelTracker(fuel_positions, constants.DISTANCE_THRESHOLD)
 
-        i = 0
-        while i < 500:
+        # i = 0
+        # while i < 500:
+        while True:
             start_time = time.perf_counter()
             # logger.info("Running: camera.run()")
             fuel_positions = numpy_to_fuel_list(camera.run())
