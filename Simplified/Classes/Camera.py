@@ -100,9 +100,9 @@ class Camera:
 
     def get_frame(self):
         with self.frame_lock:
-            if self.current_frame is None:
+            if self.frame is None:
                 return None
-            return self.current_frame.copy()
+            return self.frame.copy()
 
     def get_yolo_data(self):
         frame = self.get_frame()
