@@ -116,6 +116,7 @@ class Camera:
             img = img.astype(np.uint8)
             img = np.ascontiguousarray(img)
             img = img[None, :, :, :]
+            img = img.transpose(0, 3, 1, 2)  # Convert NHWC -> NCHW
             return img
         else:
             return None
