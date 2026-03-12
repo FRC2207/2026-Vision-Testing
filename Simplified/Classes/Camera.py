@@ -122,19 +122,19 @@ class Camera:
 
     def get_yolo_data(self):
         frame = self.get_frame()
-        self.logger.log("Got camera frame.")
+        self.logger.info("Got camera frame.")
 
         if frame is None:
             self.logger.warning("Frame not retrieved properly from camera (frame was None)")
             return None, None
 
         frame_preprocessed = self._preprocess_for_rknn(frame)
-        self.logger.log("Preprocessed frame.")
+        self.logger.info("Preprocessed frame.")
         if frame_preprocessed is None:
             self.logger.warning("Preprocessing failed; skipping prediction")
             return None, frame
         
-        self.logger.log("Running self.model.predict(frame_preproccessed)")
+        self.logger.info("Running self.model.predict(frame_preproccessed)")
         results = self.model.predict(frame_preprocessed)
 
         annotated_frame = frame.copy()
