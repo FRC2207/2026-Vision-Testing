@@ -90,9 +90,11 @@ class YoloWrapper:
         if self.model_type == "rknn":
             for frame in frames:
                 # Inference
-                self.logger.info(f"Frame info: shape={frame.shape}, dtype={frame.dtype}")
+                # self.logger.info(f"Frame info: shape={frame.shape}, dtype={frame.dtype}")
                 raw_outputs = self.model.inference(inputs=[frame])
+                self.logger.info("Ran inference.")
                 output_tensor = raw_outputs[0][0]
+                self.logger.info(f"Output: {output_tensor}")
 
                 results_list.append(
                     self._convert_rknn_outputs(
