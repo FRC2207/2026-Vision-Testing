@@ -111,19 +111,22 @@ class Camera:
             return self.frame.copy()
         
     def _preprocess_for_rknn(self, frame):
-        img = cv2.resize(frame, (640, 640))
-        img = img.astype(np.uint8)
-        img = np.ascontiguousarray(img)
-        img = img[None, :, :, :]
-        return img
+        if frame is not None:
+            img = cv2.resize(frame, (640, 640))
+            img = img.astype(np.uint8)
+            img = np.ascontiguousarray(img)
+            img = img[None, :, :, :]
+            return img
+        else:
+            return None
 
     def get_yolo_data(self):
         frame = self.get_frame()
-        frame = self.get_frame()
+        if frame is None:
+            self.logger.warning("Frame not retrieved properly from camera (frame was None)")
+            return None, None
         frame_preprocessed = self._preprocess_for_rknn(frame)
         results = self.model.predict(frame_preprocessed)
-
-        results = self.model.predict(frame)
 
         annotated_frame = frame.copy()
 
@@ -197,6 +200,9 @@ class Camera:
 
     def run(self):
         data, frame = self.get_yolo_data()
+        if data is None or frame is None:
+            return np.empty((0, 2))
+
         img_h, img_w = data.orig_shape[:2]
 
         map_points = []
