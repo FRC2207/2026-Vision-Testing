@@ -82,6 +82,7 @@ class YoloWrapper:
             )
 
     def predict(self, frame_or_frames) -> list[Results]:
+        self.logger.debug("Predict function called.")
         is_list = isinstance(frame_or_frames, list)
         frames = frame_or_frames if is_list else [frame_or_frames]
 
