@@ -223,9 +223,9 @@ class Camera:
 
     def run(self):
         data, frame = self.get_yolo_data()
-        self.logger.info(f"Got data: {data}, and frame: {frame}")
+        # self.logger.info(f"Got data: {data}, and frame: {frame}")
         if data is None or frame is None:
-            self.logger.info("Frame or data is None")
+            # self.logger.info("Frame or data is None")
             return np.empty((0, 2))
 
         img_h, img_w = data.orig_shape[:2]
