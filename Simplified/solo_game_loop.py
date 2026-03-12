@@ -78,7 +78,7 @@ if __name__ == "__main__":
                 print(fuel_position)
 
             if len(fuel_positions) == 0:
-                # logger.warning("No fuel positions detected. Skipping loop iteration.")
+                logger.warning("No fuel positions detected. Skipping loop iteration.")
                 continue
             else:
                 # logger.info(f"Detected fuels: {len(fuel_positions)}")
