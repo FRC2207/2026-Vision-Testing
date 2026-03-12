@@ -111,13 +111,12 @@ class YoloWrapper:
         return results_list if is_list else results_list[0]
 
     def _convert_rknn_outputs(self, frame_output, orig_shape):
-        # This will print ALL 6 values for the first detection
-        self.logger.info(f"Full row check: {frame_output[0]}")
+        self.logger.info(f"ENTIRE ROW: {frame_output[0]}")
+    
+        # Do NOT mask yet. Just take the first 5 boxes and print all their values
+        for i in range(5):
+            self.logger.info(f"Row {i}: {frame_output[i]}")
         
-        # Check what the values are actually like
-        self.logger.info(f"Index 4: {frame_output[0, 4]}, Index 5: {frame_output[0, 5]}")
-        
-        # Temporary: Don't mask, just take the top 5 to see what's happening
         valid = frame_output[:5] 
         
         boxes = [Box(list(map(float, b[:4])), float(b[4])) for b in valid]
