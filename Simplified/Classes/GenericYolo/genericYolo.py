@@ -77,21 +77,30 @@ class YoloWrapper:
     def predict(self, frame_or_frames) -> list[Results]:
         is_list = isinstance(frame_or_frames, list)
         frames = frame_or_frames if is_list else [frame_or_frames]
-        
+
         if self.model_type == "rknn":
+            # Resize frames to model input size
             processed = [cv2.resize(f, self.input_size) for f in frames]
+
             batch_input = np.stack(processed, axis=0)
             batch_input = np.ascontiguousarray(batch_input, dtype=np.uint8)
-            
-            raw_outputs = self.model.inference(inputs=[batch_input])
-            
-            print(f"DEBUG: Number of output heads: {len(raw_outputs)}")
-            results_list = [
-                self._convert_rknn_outputs(raw_outputs[i], frames[i].shape) 
-                for i in range(len(frames))
-            ]
 
-        else: # All other types (hopefully) work natevily with Ultralytics YOLO
+            # Run inference
+            raw_outputs = self.model.inference(inputs=[batch_input])
+
+            self.logger.debug(f"DEBUG: Number of output heads: {len(raw_outputs)}")
+
+            output_tensor = raw_outputs[0]
+
+            results_list = []
+
+            for i in range(len(frames)):
+                frame_output = output_tensor[i]  # select batch slice
+                results_list.append(
+                    self._convert_rknn_outputs(frame_output, frames[i].shape)
+                )
+
+        else:  # Ultralytics YOLO (pt / onnx / openvino)
             results = self.model(frames, verbose=False, imgsz=320)
             results_list = [self._convert_ultralytics_to_results(r) for r in results]
 

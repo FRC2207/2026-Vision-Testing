@@ -91,6 +91,7 @@ class Camera:
                 raise ValueError(f"Failed to retrieve frame from: {self.source}")
             if self.grayscale:
                 frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)  # Restore 3 channels, it wil still be gray tho
 
             self.frame = frame
 

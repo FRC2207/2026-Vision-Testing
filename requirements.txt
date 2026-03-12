@@ -22,4 +22,5 @@ requests
 flask
 pygame
 Pillow
+robotpy
 #snakeviz optional but good for profiling stuff
