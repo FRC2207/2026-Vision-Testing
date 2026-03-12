@@ -113,6 +113,7 @@ class YoloWrapper:
     def _convert_rknn_outputs(self, frame_output, orig_shape):
         # 1. Inspect the shape to be sure
         self.logger.info(f"Frame output shape before transpose: {frame_output.shape}")
+        self.logger.info(f"Sample row: {frame_output[0]}")
         
         # 2. Transpose if the '6' is the first dimension
         # If shape is (6, 8400), it becomes (8400, 6)
