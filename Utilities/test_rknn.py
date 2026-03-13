@@ -131,7 +131,7 @@ for idx, (scale, use_center) in enumerate(strategies):
         x, y, w, h, conf = data[i]
         
         # Apply scaling
-        x, y, w, h = x * scale, y * scale, w * scale, h * scale
+        x, y, w, h = np.nan_to_num([x, y, w, h], nan=0.0, posinf=640.0, neginf=0.0)
         
         if use_center:
             x1, y1 = int(x - w / 2), int(y - h / 2)
