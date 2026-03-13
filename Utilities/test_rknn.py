@@ -41,6 +41,29 @@ for i, box in enumerate(boxes):
     
     cv2.rectangle(original_img, (x1, y1), (x2, y2), (0, 255, 0), 2)
     print(f"Object {i}: {x1, y1, x2, y2} Conf: {conf_scores[i]:.2f}")
+# 1. Prepare data for NMS (OpenCV requires list format)
+boxes = []
+confidences = []
 
+# Assuming 'data' is your (8400, 5) array: [x, y, w, h, conf]
+for i in range(len(data)):
+    x, y, w, h, conf = data[i]
+    if conf > 0.4: # Slightly lower threshold to catch candidates
+        # Convert to top-left format for OpenCV
+        x1 = int(x - w / 2)
+        y1 = int(y - h / 2)
+        boxes.append([x1, y1, int(w), int(h)])
+        confidences.append(float(conf))
+
+# 2. Apply NMS
+# nms_threshold (e.g., 0.4) controls how much overlap is allowed
+indices = cv2.dnn.NMSBoxes(boxes, confidences, score_threshold=0.4, nms_threshold=0.4)
+
+# 3. Print clean results
+print(f"Final detections after NMS: {len(indices)}")
+for i in indices:
+    box = boxes[i]
+    print(f"Detection {i}: {box} Conf: {confidences[i]:.2f}")
+    
 cv2.imwrite('detected_1.png', original_img)
 rknn.release()
