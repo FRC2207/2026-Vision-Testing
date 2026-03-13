@@ -5,6 +5,23 @@ from rknnlite.api import RKNNLite
 def sigmoid(x):
     return 1 / (1 + np.exp(-x))
 
+def letterbox(img, target_size=(640, 640)):
+    """Resize image with unchanged aspect ratio using padding"""
+    h, w = img.shape[:2]
+    target_w, target_h = target_size
+    scale = min(target_w / w, target_h / h)
+    new_w, new_h = int(w * scale), int(h * scale)
+    resized = cv2.resize(img, (new_w, new_h))
+    
+    pad_w = target_w - new_w
+    pad_h = target_h - new_h
+    top = pad_h // 2
+    bottom = pad_h - top
+    left = pad_w // 2
+    right = pad_w - left
+    padded = cv2.copyMakeBorder(resized, top, bottom, left, right, cv2.BORDER_CONSTANT, value=(114,114,114))
+    return padded, scale, left, top
+
 # -----------------
 # Load RKNN model
 # -----------------
@@ -16,26 +33,25 @@ rknn.init_runtime(core_mask=RKNNLite.NPU_CORE_0)
 # Load and preprocess image
 # -----------------
 img = cv2.imread("Images/1.png")
+orig_h, orig_w = img.shape[:2]
 orig = img.copy()
-img_resized = cv2.resize(img, (640, 640))
-img_input = np.expand_dims(img_resized, 0).astype(np.float32)  # Ensure float32
+
+img_resized, scale, pad_x, pad_y = letterbox(img, (640, 640))
+img_input = np.expand_dims(img_resized, 0).astype(np.float32)
 img_input = np.ascontiguousarray(img_input)
 
 # -----------------
 # Run inference
 # -----------------
 outputs = rknn.inference(inputs=[img_input])
-raw = outputs[0][0]          # (5, 8400) for example
-data = raw.T                 # (8400, 5)
+raw = outputs[0][0]          
+data = raw.T                 
 
 # Filter invalid rows
 valid_mask = ~np.isinf(data).any(axis=1) & ~np.isnan(data).any(axis=1)
 data = data[valid_mask]
 
 print("Shape after filtering:", data.shape)
-print("NaN count:", np.isnan(data).sum())
-print("Inf count:", np.isinf(data).sum())
-print("Sample rows:\n", data[:10])
 
 # -----------------
 # Decode boxes
@@ -45,13 +61,23 @@ scores = []
 
 for row in data:
     x, y, w, h, conf = row
-    conf = sigmoid(conf)
-    if conf < 0.4:   # threshold
+    if conf == 0:  # Remove zeros before sigmoid
         continue
+    conf = sigmoid(conf)
+    if conf < 0.4:
+        continue
+
+    # Convert from model coordinates to original image coordinates
+    x = (x - pad_x) / scale
+    y = (y - pad_y) / scale
+    w /= scale
+    h /= scale
+
     x1 = int(x - w/2)
     y1 = int(y - h/2)
     x2 = int(x + w/2)
     y2 = int(y + h/2)
+
     boxes.append([x1, y1, x2-x1, y2-y1])
     scores.append(float(conf))
 
@@ -67,12 +93,7 @@ indices = cv2.dnn.NMSBoxes(
     nms_threshold=0.45
 )
 
-# Flatten indices if needed
-if len(indices) > 0:
-    indices = indices.flatten()
-else:
-    indices = []
-
+indices = indices.flatten() if len(indices) > 0 else []
 print("Final boxes after NMS:", len(indices))
 
 # -----------------
