@@ -80,13 +80,6 @@ if __name__ == "__main__":
             for fuel_position in fuel_positions:
                 print(fuel_position)
 
-            if len(fuel_positions) == 0:
-                logger.warning("No fuel positions detected. Skipping loop iteration.")
-                continue
-            else:
-                # logger.info(f"Detected fuels: {len(fuel_positions)}")
-                pass
-
             if constants.APP_MODE:
                 frame = camera.get_frame()
                 logger.info(f"Frame: {frame}")
@@ -94,6 +87,13 @@ if __name__ == "__main__":
                     logger.warning("Frame not returned from camera.get_frame()")
                 else:
                     camera_app.set_frame(frame)
+
+            if len(fuel_positions) == 0:
+                logger.warning("No fuel positions detected. Skipping loop iteration.")
+                continue
+            else:
+                # logger.info(f"Detected fuels: {len(fuel_positions)}")
+                pass
 
             _, fuel_positions = planner.update_fuel_positions(fuel_list_to_numpy(fuel_positions))
             if constants.USE_NETWORK_TABLES:
