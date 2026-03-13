@@ -121,9 +121,9 @@ class YoloWrapper:
             self.logger.info(f"Squeezed frame_output shape: {frame_output.shape}")
 
         # Remove transpose; only keep for debugging
-        # if frame_output.shape[0] < frame_output.shape[1]:
-        #     frame_output = frame_output.T
-        #     self.logger.info(f"Transposed frame_output shape: {frame_output.shape}")
+        if frame_output.shape[0] < frame_output.shape[1]:
+            frame_output = frame_output.T
+            self.logger.info(f"Transposed frame_output shape: {frame_output.shape}")
 
         # Remove invalid rows
         valid_mask = ~np.isinf(frame_output).any(axis=1) & ~np.isnan(frame_output).any(axis=1)
