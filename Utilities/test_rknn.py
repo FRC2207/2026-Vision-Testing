@@ -26,7 +26,7 @@ def letterbox(img, target_size=(640, 640)):
 # Load RKNN model
 # -----------------
 rknn = RKNNLite()
-rknn.load_rknn("model_test.rknn")
+rknn.load_rknn("model_test_quant.rknn")
 rknn.init_runtime(core_mask=RKNNLite.NPU_CORE_0)
 
 # -----------------
