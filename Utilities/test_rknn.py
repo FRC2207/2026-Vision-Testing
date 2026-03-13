@@ -4,11 +4,11 @@ import numpy as np
 
 # Initialize
 rknn = RKNNLite()
-rknn.load_rknn('your_model.rknn')
+rknn.load_rknn('model_test_backup.rknn')
 rknn.init_runtime(core_mask=RKNNLite.NPU_CORE_0)
 
 # Preprocess (CRITICAL: Match your training normalization)
-img = cv2.imread('test.jpg')
+img = cv2.imread('Images/1.png')
 img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 img = cv2.resize(img, (640, 640))
 img = np.expand_dims(img, axis=0)
