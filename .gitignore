@@ -10,4 +10,4 @@ OfflineIntall
 kernel.errors.txt
 rknn_env/
 rknn-toolkit2/
-*.png
+profile.prof

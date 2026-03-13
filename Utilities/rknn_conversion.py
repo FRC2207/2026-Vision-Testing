@@ -8,8 +8,7 @@ rknn.config(
     std_values=[[255,255,255]],
     # disable_rules=['fuse_exmatmul_add_mul_exsoftmax13_exmatmul_to_sdpa'],
     quantized_dtype='w8a8',
-    # quantized_hybrid_level=2,
-    output_optimize=False
+    quantized_hybrid_level=2 ,
 )
 
 rknn.load_onnx(

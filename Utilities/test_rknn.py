@@ -22,16 +22,10 @@ def letterbox(img, target_size=(640, 640)):
     padded = cv2.copyMakeBorder(resized, top, bottom, left, right, cv2.BORDER_CONSTANT, value=(114,114,114))
     return padded, scale, left, top
 
-# -----------------
-# Load RKNN model
-# -----------------
 rknn = RKNNLite()
 rknn.load_rknn("model_test_hybrid_quant.rknn")
 rknn.init_runtime(core_mask=RKNNLite.NPU_CORE_0)
 
-# -----------------
-# Load and preprocess image
-# -----------------
 img = cv2.imread("Images/1.png")
 orig_h, orig_w = img.shape[:2]
 orig = img.copy()
@@ -40,9 +34,6 @@ img_resized, scale, pad_x, pad_y = letterbox(img, (640, 640))
 img_input = np.expand_dims(img_resized, 0).astype(np.uint8)
 img_input = np.ascontiguousarray(img_input)
 
-# -----------------
-# Run inference
-# -----------------
 outputs = rknn.inference(inputs=[img_input])
 raw = outputs[0][0]          
 data = raw.T         
@@ -50,7 +41,6 @@ data = raw.T
 print("dtype:", outputs[0].dtype)
 print("min/max:", outputs[0].min(), outputs[0].max())
 print("sample:", outputs[0].flatten()[:20])
-# Filter invalid rows
 valid_mask = ~np.isinf(data).any(axis=1) & ~np.isnan(data).any(axis=1)
 data = data[valid_mask]
 raw_confidences = data[:, 4]
@@ -58,9 +48,6 @@ print("Confidence stats: min, max, mean", raw_confidences.min(), raw_confidences
 
 print("Shape after filtering:", data.shape)
 
-# -----------------
-# Decode boxes
-# -----------------
 boxes = []
 scores = []
 
@@ -96,9 +83,6 @@ for row in data:
 
 print("Candidates before NMS:", len(boxes))
 
-# -----------------
-# Non-Max Suppression
-# -----------------
 indices = cv2.dnn.NMSBoxes(
     boxes,
     scores,
@@ -109,9 +93,6 @@ indices = cv2.dnn.NMSBoxes(
 indices = indices.flatten() if len(indices) > 0 else []
 print("Final boxes after NMS:", len(indices))
 
-# -----------------
-# Draw results
-# -----------------
 for i in indices:
     x, y, w, h = boxes[i]
     cv2.rectangle(orig, (x, y), (x+w, y+h), (0, 255, 0), 2)

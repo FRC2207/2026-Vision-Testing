@@ -9,12 +9,10 @@ try:
 except ImportError:
     RKNN_FOUND = None
 
-
 class Box:
     def __init__(self, xyxy, conf):
         self.xyxy = xyxy
         self.conf = conf
-
 
 class Results:
     def __init__(self, boxes: list[Box], orig_shape):
@@ -27,7 +25,6 @@ class Results:
             x1, y1, x2, y2 = map(int, box.xyxy)
             cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
         return frame
-
 
 class YoloWrapper:
     def __init__(self, model_file: str, input_size=(640, 640)):
@@ -115,27 +112,55 @@ class YoloWrapper:
             frame_output = frame_output[0]
 
         if frame_output.shape[0] < frame_output.shape[1]:
-            frame_output = frame_output.transpose()
+            frame_output = frame_output.T
+
+        orig_h, orig_w = orig_shape[:2]
+        target_size = self.input_size
+
+        scale = min(target_size[0] / orig_w, target_size[1] / orig_h)
+        new_w, new_h = int(orig_w * scale), int(orig_h * scale)
+        pad_x = (target_size[0] - new_w) / 2
+        pad_y = (target_size[1] - new_h) / 2
 
         boxes = []
-        for b in frame_output:
-            x_c, y_c, w, h = b[:4]
-            
-            x1 = x_c - (w / 2)
-            y1 = y_c - (h / 2)
-            x2 = x_c + (w / 2)
-            y2 = y_c + (h / 2)
-            
-            class_scores = b[4:]
-            
-            conf = float(np.max(class_scores)) # If still wrong add self._sigmoid
-            
-            # Basic confidence threshold to not process thousands of empty boxes
-            if conf > 0.25:
-                if (x2 > x1) and (y2 > y1):
-                    boxes.append(Box([float(x1), float(y1), float(x2), float(y2)], conf))
-        
-        return Results(boxes, orig_shape)
+        for row in frame_output:
+            x_c, y_c, w, h, conf = row[:5]
+            class_scores = row[5:] if len(row) > 5 else [conf]
+
+            conf = float(self._sigmoid(conf))
+            conf = float(np.max(class_scores)) * conf
+
+            if conf < 0.25: # Defualt confidence thresohld to skip doing math on thousands of low confidence detections
+                continue
+
+            # Map coordinates to original image
+            x = (x_c - pad_x) / scale
+            y = (y_c - pad_y) / scale
+            w /= scale
+            h /= scale
+
+            x1 = max(0, int(x - w/2))
+            y1 = max(0, int(y - h/2))
+            x2 = min(orig_w - 1, int(x + w/2))
+            y2 = min(orig_h - 1, int(y + h/2))
+
+            if (x2 - x1) <= 0 or (y2 - y1) <= 0:
+                continue
+
+            boxes.append(Box([x1, y1, x2, y2], conf))
+
+        # Apply NMS
+        scores = [b.conf for b in boxes]
+        indices = cv2.dnn.NMSBoxes(
+            [b.xyxy for b in boxes],
+            scores,
+            score_threshold=0.25,
+            nms_threshold=0.3
+        )
+        indices = indices.flatten() if len(indices) > 0 else []
+        final_boxes = [boxes[i] for i in indices]
+
+        return Results(final_boxes, orig_shape)
 
     def _convert_ultralytics_to_results(self, ultralytics_result):
         boxes = [Box(list(b.xyxy[0]), float(b.conf[0])) for b in ultralytics_result.boxes]
@@ -143,6 +168,22 @@ class YoloWrapper:
 
     def _sigmoid(self, x):
         return 1 / (1 + np.exp(-x))
+
+    def letterbox(self, img, target_size=(640, 640)):
+        h, w = img.shape[:2]
+        target_w, target_h = target_size
+        scale = min(target_w / w, target_h / h)
+        new_w, new_h = int(w * scale), int(h * scale)
+        resized = cv2.resize(img, (new_w, new_h))
+        
+        pad_w = target_w - new_w
+        pad_h = target_h - new_h
+        top = pad_h // 2
+        bottom = pad_h - top
+        left = pad_w // 2
+        right = pad_w - left
+        padded = cv2.copyMakeBorder(resized, top, bottom, left, right, cv2.BORDER_CONSTANT, value=(114,114,114))
+        return padded, scale, left, top
 
     def release(self):
         if self.model_type == "rknn":
