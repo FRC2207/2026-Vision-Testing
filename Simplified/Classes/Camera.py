@@ -157,7 +157,7 @@ class Camera:
     def _preprocess_for_rknn(self, frame):
         if frame is not None:
             img_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            img_resized, _, _, _ = self._letterbox(frame, (640, 640))
+            img_resized, _, _, _ = self._letterbox(self, frame, (640, 640))
         
             img_input = np.expand_dims(img_resized, 0)
             img_input = np.ascontiguousarray(img_input)
