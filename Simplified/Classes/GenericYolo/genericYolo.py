@@ -94,8 +94,6 @@ class YoloWrapper:
                 # self.logger.info(f"Frame info: shape={frame.shape}, dtype={frame.dtype}")
                 raw_outputs = self.model.inference(inputs=[frame])
                 # self.logger.info("Ran inference.")
-                for o in raw_outputs:
-                    self.logger.info(o.shape)
                 output_tensor = raw_outputs[0][0]
                 # self.logger.info(f"Output: {output_tensor}")
                 # self.logger.info(f"Raw output: {raw_outputs}")
@@ -116,29 +114,27 @@ class YoloWrapper:
         if frame_output.ndim == 3:
             frame_output = frame_output[0]
 
+        if frame_output.shape[0] < frame_output.shape[1]:
+            frame_output = frame_output.transpose()
+
         boxes = []
-
-        for pred in frame_output:
-            cx, cy, w, h = pred[:4]
-            obj = self._sigmoid(pred[4])
-
-            class_scores = self._sigmoid(pred[5:])
-            cls_id = np.argmax(class_scores)
-            cls_conf = class_scores[cls_id]
-
-            conf = obj * cls_conf
-
-            # if conf < 0.25:
-            #     continue
-            # Handled elsewhere in my code
-
-            x1 = cx - w / 2
-            y1 = cy - h / 2
-            x2 = cx + w / 2
-            y2 = cy + h / 2
-
-            boxes.append(Box([x1, y1, x2, y2], float(conf)))
-
+        for b in frame_output:
+            x_c, y_c, w, h = b[:4]
+            
+            x1 = x_c - (w / 2)
+            y1 = y_c - (h / 2)
+            x2 = x_c + (w / 2)
+            y2 = y_c + (h / 2)
+            
+            class_scores = b[4:]
+            
+            conf = float(np.max(class_scores)) # If still wrong add self._sigmoid
+            
+            # Basic confidence threshold to not process thousands of empty boxes
+            if conf > 0.25:
+                if (x2 > x1) and (y2 > y1):
+                    boxes.append(Box([float(x1), float(y1), float(x2), float(y2)], conf))
+        
         return Results(boxes, orig_shape)
 
     def _convert_ultralytics_to_results(self, ultralytics_result):
