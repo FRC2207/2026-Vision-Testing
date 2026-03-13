@@ -120,6 +120,9 @@ class YoloWrapper:
         if frame_output.shape[0] < frame_output.shape[1]:
             frame_output = frame_output.T
 
+        valid_mask = ~np.isinf(frame_output).any(axis=1) & ~np.isnan(frame_output).any(axis=1)
+        frame_output = frame_output[valid_mask]
+
         orig_h, orig_w = orig_shape[:2]
         target_size = self.input_size
 
@@ -131,7 +134,7 @@ class YoloWrapper:
         boxes = []
         for row in frame_output:
             x_c, y_c, w, h, conf = row[:5]
-            class_scores = row[5:] if len(row) > 5 else [conf]
+            # class_scores = row[5:] if len(row) > 5 else [conf]
 
             conf = float(self._sigmoid(conf))
             # conf = float(np.max(class_scores)) * conf
