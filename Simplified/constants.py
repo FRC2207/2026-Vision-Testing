@@ -3,7 +3,7 @@ import json
 
 # Got around 20 fps, need to optimize. 21 with __slots__
 
-DEBUG_MODE = False
+DEBUG_MODE = True
 APP_MODE = True
 USE_NETWORK_TABLES = False # Obvisouly shuold be set to true for game, but testing set to False
 

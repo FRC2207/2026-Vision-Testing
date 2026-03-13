@@ -61,7 +61,7 @@ class Camera:
         self.debug_mode = debug_mode
         self.ball_count = 0
 
-        self.gui_available = True
+        self.gui_available = False
         self.logger = logging.getLogger(__name__)
         self.logger.info(f"Camera object created with: {self.__dict__}")
 
