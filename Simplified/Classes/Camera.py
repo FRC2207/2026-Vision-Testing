@@ -147,8 +147,7 @@ class Camera:
         
         # self.logger.info("Calling self.model.predict(frame_preprocessed)")
         results = self.model.predict(frame_preprocessed)
-        for result in results:
-            self.logger.info(str(result))
+        self.logger.info(str(results))
 
         annotated_frame = frame.copy()
 
