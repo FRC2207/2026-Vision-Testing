@@ -91,8 +91,10 @@ class Camera:
 
         self.model = YoloWrapper(self.yolo_model_file)
         self.frame_lock = threading.Lock()
-        threading.Thread(target=self._reader, daemon=True).start()
-
+        if not self.is_image:
+            self.frame_lock = threading.Lock()
+            threading.Thread(target=self._reader, daemon=True).start()
+            
     def _reader(self):
         self.logger.info(f"self.stopped: {self.stopped}")
         while not self.stopped:
