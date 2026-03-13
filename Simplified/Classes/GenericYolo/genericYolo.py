@@ -114,32 +114,35 @@ class YoloWrapper:
         return results_list if is_list else results_list[0]
 
     def _convert_rknn_outputs(self, frame_output, orig_shape):
+        self.logger.info(f"Original frame_output shape: {frame_output.shape}")
+
         if frame_output.ndim == 3:
             frame_output = frame_output[0]
+            self.logger.info(f"Squeezed frame_output shape: {frame_output.shape}")
 
-        if frame_output.shape[0] < frame_output.shape[1]:
-            frame_output = frame_output.T
+        # Remove transpose; only keep for debugging
+        # if frame_output.shape[0] < frame_output.shape[1]:
+        #     frame_output = frame_output.T
+        #     self.logger.info(f"Transposed frame_output shape: {frame_output.shape}")
 
+        # Remove invalid rows
         valid_mask = ~np.isinf(frame_output).any(axis=1) & ~np.isnan(frame_output).any(axis=1)
         frame_output = frame_output[valid_mask]
+        self.logger.info(f"After filtering invalid rows, frame_output shape: {frame_output.shape}")
 
         orig_h, orig_w = orig_shape[:2]
         target_size = self.input_size
-
         scale = min(target_size[0] / orig_w, target_size[1] / orig_h)
         new_w, new_h = int(orig_w * scale), int(orig_h * scale)
         pad_x = (target_size[0] - new_w) / 2
         pad_y = (target_size[1] - new_h) / 2
 
         boxes = []
-        for row in frame_output:
+        for i, row in enumerate(frame_output):
             x_c, y_c, w, h, conf = row[:5]
-            # class_scores = row[5:] if len(row) > 5 else [conf]
-
             conf = float(self._sigmoid(conf))
-            # conf = float(np.max(class_scores)) * conf
 
-            if conf < 0.25: # Defualt confidence thresohld to skip doing math on thousands of low confidence detections
+            if conf < 0.25:
                 continue
 
             # Map coordinates to original image
@@ -158,12 +161,21 @@ class YoloWrapper:
 
             boxes.append(Box([x1, y1, x2, y2], conf))
 
+        self.logger.info(f"Number of boxes before NMS: {len(boxes)}")
+        
+        if not boxes:
+            self.logger.info("No boxes passed confidence threshold.")
+            return Results([], orig_shape)
+
         # Apply NMS
         scores = [b.conf for b in boxes]
         nms_boxes = [[b.xyxy[0], b.xyxy[1], b.xyxy[2]-b.xyxy[0], b.xyxy[3]-b.xyxy[1]] for b in boxes]
         indices = cv2.dnn.NMSBoxes(nms_boxes, scores, score_threshold=0.25, nms_threshold=0.3)
         indices = indices.flatten() if len(indices) > 0 else []
+
+        self.logger.info(f"Indices after NMS: {indices}")
         final_boxes = [boxes[i] for i in indices]
+        self.logger.info(f"Number of final boxes: {len(final_boxes)}")
 
         return Results(final_boxes, orig_shape)
 
