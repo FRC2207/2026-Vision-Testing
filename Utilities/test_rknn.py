@@ -34,6 +34,9 @@ outputs = rknn.inference(inputs=[img])
 raw = outputs[0][0]
 data = raw.T
 
+valid_mask = ~np.isinf(data).any(axis=1) & ~np.isnan(data).any(axis=1)
+data = data[valid_mask]
+
 print("Shape:", data.shape)
 
 print("NaN count:", np.isnan(data).sum())
