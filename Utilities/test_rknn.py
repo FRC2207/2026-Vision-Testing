@@ -29,7 +29,18 @@ img = np.ascontiguousarray(img)
 # Inference
 # -----------------
 outputs = rknn.inference(inputs=[img])
+outputs = rknn.inference(inputs=[img])
 
+raw = outputs[0][0]
+data = raw.T
+
+print("Shape:", data.shape)
+
+print("NaN count:", np.isnan(data).sum())
+print("Inf count:", np.isinf(data).sum())
+
+print("Sample rows:")
+print(data[:10])
 raw = outputs[0][0]        # (5,8400)
 data = raw.T               # (8400,5)
 
