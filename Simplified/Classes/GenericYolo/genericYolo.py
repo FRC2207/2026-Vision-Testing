@@ -160,12 +160,8 @@ class YoloWrapper:
 
         # Apply NMS
         scores = [b.conf for b in boxes]
-        indices = cv2.dnn.NMSBoxes(
-            [b.xyxy for b in boxes],
-            scores,
-            score_threshold=0.25,
-            nms_threshold=0.3
-        )
+        nms_boxes = [[b.xyxy[0], b.xyxy[1], b.xyxy[2]-b.xyxy[0], b.xyxy[3]-b.xyxy[1]] for b in boxes]
+        indices = cv2.dnn.NMSBoxes(nms_boxes, scores, score_threshold=0.25, nms_threshold=0.3)
         indices = indices.flatten() if len(indices) > 0 else []
         final_boxes = [boxes[i] for i in indices]
 
