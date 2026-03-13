@@ -1,47 +1,34 @@
 import numpy as np
-from rknnlite.api import RKNNLite
-from PIL import Image
+from rknn.api import RKNN
+import cv2
 
-def sigmoid(x):
-    return 1 / (1 + np.exp(-x))
+# --- SETTINGS ---
+RKNN_MODEL = 'model_test_backup.rknn'
+IMG_PATH = 'Images/1.png' # Use a real image of a game piece!
 
-def test_raw_output_to_boxes(model_path, image_path):
-    rknn = RKNNLite()
-    rknn.load_rknn(model_path)
-    rknn.init_runtime(core_mask=RKNNLite.NPU_CORE_0)
+rknn = RKNN()
+print('--> Loading model')
+rknn.load_rknn(RKNN_MODEL)
+print('--> Init runtime')
+rknn.init_runtime()
 
-    # 1. Run Inference
-    img = Image.open(image_path).convert('RGB').resize((640, 640))
-    input_data = np.expand_dims(np.array(img), 0)
-    outputs = rknn.inference(inputs=[input_data])
+# Prepare image
+img = cv2.imread(IMG_PATH)
+img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+img = cv2.resize(img, (640, 640)) 
 
-    # 2. Reshape from (1, 5, 8400) to (8400, 5)
-    # The columns are [xc, yc, w, h, conf]
-    data = outputs[0][0].transpose()
+# Inference
+outputs = rknn.inference(inputs=[img])
 
-    # 3. Apply Sigmoid to the confidence column (index 4)
-    data[:, 4] = sigmoid(data[:, 4])
+print("\n" + "="*30)
+print("RKNN OUTPUT DIAGNOSTICS")
+print("="*30)
+for i, out in enumerate(outputs):
+    print(f"Output [{i}] Shape: {out.shape}")
+    # Flatten to see the first few values clearly
+    flat = out.flatten()
+    print(f"First 10 raw values: {flat[:10]}")
+    print(f"Value Range: Min={flat.min():.4f}, Max={flat.max():.4f}")
+print("="*30)
 
-    # 4. Filter by confidence threshold (e.g., 0.25)
-    conf_thresh = 0.25
-    mask = data[:, 4] > conf_thresh
-    filtered_data = data[mask]
-
-    print(f"Detections found above {conf_thresh}: {len(filtered_data)}")
-
-    # 5. Convert Center (xc, yc, w, h) to (x1, y1, x2, y2)
-    # The math: x1 = xc - w/2, y1 = yc - h/2, etc.
-    if len(filtered_data) > 0:
-        xc, yc, w, h, conf = filtered_data.T
-        x1 = xc - (w / 2)
-        y1 = yc - (h / 2)
-        x2 = xc + (w / 2)
-        y2 = yc + (h / 2)
-
-        for i in range(len(filtered_data)):
-            print(f"Conf: {conf[i]:.2f} | Box: [{x1[i]:.1f}, {y1[i]:.1f}, {x2[i]:.1f}, {y2[i]:.1f}]")
-    
-    rknn.release()
-
-if __name__ == "__main__":
-    test_raw_output_to_boxes("model_test.rknn", 'Images/2.png')
+rknn.release()
