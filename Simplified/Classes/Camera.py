@@ -69,7 +69,7 @@ class Camera:
 
         if source.lower().endswith((".png", ".jpg", ".jpeg", ".bmp")):
             self.is_image = True
-            self.image = self._preprocess_for_rknn(cv2.imread(source))
+            self.image = cv2.imread(source)
             if self.image is None:
                 raise ValueError(f"Failed to read image {source}")
         else:
@@ -121,18 +121,22 @@ class Camera:
 
             time.sleep(0.01) # Help not overuse CPU
 
-    def get_frame(self):
+    def get_frame(self, preprocessed=False):
+        frame = None
         if self.is_image:
-            self.stopped = True  # Only return the image once
-            return self.image.copy()
+            frame = self.image.copy()
         else:
             with self.frame_lock:
-                if self.frame is None:
-                    self.logger.warning(f"self.frame was None")
-                    return None
-                # self.logger.info(self.frame.copy())
-                return self.frame.copy()
-            # return self.frame
+                if self.frame is not None:
+                    frame = self.frame.copy()
+        
+        if frame is None:
+            return None
+            
+        if preprocessed:
+            return self._preprocess_for_rknn(frame)
+            
+        return frame
 
     def _preprocess_for_rknn(self, frame):
         if frame is not None:
@@ -153,7 +157,7 @@ class Camera:
 
     def get_yolo_data(self):
         # self.logger.info("Calling: self.get_frame()")
-        frame = self.get_frame()
+        frame = self.get_frame(preprocessed=False)
 
         if frame is None:
             self.logger.warning("Frame not retrieved properly from camera (frame was None)")
