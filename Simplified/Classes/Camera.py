@@ -147,7 +147,6 @@ class Camera:
         
         # self.logger.info("Calling self.model.predict(frame_preprocessed)")
         results = self.model.predict(frame_preprocessed)
-        self.logger.info(str(results))
 
         annotated_frame = frame.copy()
 
@@ -226,7 +225,7 @@ class Camera:
         data, frame = self.get_yolo_data()
         self.logger.info(f"Got data: {data}, and frame: {frame}")
         if data is None or frame is None:
-            # self.logger.info("Frame or data is None")
+            self.logger.info("Frame or data is None")
             return np.empty((0, 2))
 
         img_h, img_w = frame.shape[:2]
@@ -262,9 +261,9 @@ class Camera:
             cx = (x1 + x2) / 2.0
             cy = (y1 + y2) / 2.0
 
-
             avg_pixels = (w_pixels + h_pixels) / 2.0
             if avg_pixels <= 0:
+                self.logger.info("Skipping detection due to illegal shape")
                 continue
 
             distance_los = (self.ball_d_inches * self.focal_length_pixels) / avg_pixels
