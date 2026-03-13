@@ -37,7 +37,7 @@ orig_h, orig_w = img.shape[:2]
 orig = img.copy()
 
 img_resized, scale, pad_x, pad_y = letterbox(img, (640, 640))
-img_input = np.expand_dims(img_resized, 0).astype(np.uint8)
+img_input = np.expand_dims(img_resized, 0).astype(np.float32)
 img_input = np.ascontiguousarray(img_input)
 
 # -----------------
@@ -47,7 +47,9 @@ outputs = rknn.inference(inputs=[img_input])
 raw = outputs[0][0]          
 data = raw.T         
         
-
+print("dtype:", outputs[0].dtype)
+print("min/max:", outputs[0].min(), outputs[0].max())
+print("sample:", outputs[0].flatten()[:20])
 # Filter invalid rows
 valid_mask = ~np.isinf(data).any(axis=1) & ~np.isnan(data).any(axis=1)
 data = data[valid_mask]
