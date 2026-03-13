@@ -72,8 +72,6 @@ if __name__ == "__main__":
             # logger.info("Running: camera.run()")
             fuel_positions = numpy_to_fuel_list(camera.run())
 
-            logger.info(f"Frame: {camera.get_frame()}")
-
             fuel_tracker.set_fuel_list(fuel_positions)
             fuel_tracker.sort()
             fuel_positions = fuel_tracker.get_fuel_list()
