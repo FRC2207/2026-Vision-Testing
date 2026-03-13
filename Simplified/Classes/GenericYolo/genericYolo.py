@@ -84,7 +84,7 @@ class YoloWrapper:
                 f"Unsupported model file type: {self.model_file}. Check constants and spelling blud."
             )
 
-    def predict(self, frame_or_frames) -> list[Results]:
+    def predict(self, frame_or_frames, orig_shape=None) -> list[Results]:
         is_list = isinstance(frame_or_frames, list)
         frames = frame_or_frames if is_list else [frame_or_frames]
         # self.logger.info(f"Running with is_list: {is_list}")
@@ -100,11 +100,12 @@ class YoloWrapper:
                 output_tensor = raw_outputs[0][0]
                 # self.logger.info(f"Output: {output_tensor}")
                 # self.logger.info(f"Raw output: {raw_outputs}")
+                target_shape = orig_shape if orig_shape is not None else frame.shape
 
                 results_list.append(
                     self._convert_rknn_outputs(
                         output_tensor,
-                        frame.shape
+                        target_shape
                     )
                 )
         else:

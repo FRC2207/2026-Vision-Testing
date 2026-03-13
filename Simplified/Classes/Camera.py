@@ -183,8 +183,8 @@ class Camera:
             return None, frame
         
         # self.logger.info("Calling self.model.predict(frame_preprocessed)")
-        results = self.model.predict(frame_preprocessed)
-
+        results = self.model.predict(frame_preprocessed, orig_shape=frame.shape)
+        
         annotated_frame = frame.copy()
 
         # Show it with cv2
