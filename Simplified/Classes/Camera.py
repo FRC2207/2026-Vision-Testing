@@ -91,7 +91,6 @@ class Camera:
 
         self.model = YoloWrapper(self.yolo_model_file)
         self.frame_lock = threading.Lock()
-        self.ret, self.frame = self.cap.read()
         threading.Thread(target=self._reader, daemon=True).start()
 
     def _reader(self):
