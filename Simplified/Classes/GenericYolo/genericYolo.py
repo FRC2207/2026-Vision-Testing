@@ -94,6 +94,8 @@ class YoloWrapper:
                 # self.logger.info(f"Frame info: shape={frame.shape}, dtype={frame.dtype}")
                 raw_outputs = self.model.inference(inputs=[frame])
                 # self.logger.info("Ran inference.")
+                for o in raw_outputs:
+                    self.logger.info(o.shape)
                 output_tensor = raw_outputs[0][0]
                 # self.logger.info(f"Output: {output_tensor}")
                 # self.logger.info(f"Raw output: {raw_outputs}")
@@ -114,20 +116,29 @@ class YoloWrapper:
         if frame_output.ndim == 3:
             frame_output = frame_output[0]
 
-        raw_conf = frame_output[:, 4]
-        confidences = self._sigmoid(raw_conf)
-        
         boxes = []
-        for i, b in enumerate(frame_output):
-            x1, y1, x2, y2 = b[:4]
-            conf = float(confidences[i])
-            
-            if (x2 > x1) and (y2 > y1):
-                
-                final_conf = 1.0 if conf == 0.0 else conf
-                
-                boxes.append(Box([float(x1), float(y1), float(x2), float(y2)], final_conf))
-        
+
+        for pred in frame_output:
+            cx, cy, w, h = pred[:4]
+            obj = self._sigmoid(pred[4])
+
+            class_scores = self._sigmoid(pred[5:])
+            cls_id = np.argmax(class_scores)
+            cls_conf = class_scores[cls_id]
+
+            conf = obj * cls_conf
+
+            # if conf < 0.25:
+            #     continue
+            # Handled elsewhere in my code
+
+            x1 = cx - w / 2
+            y1 = cy - h / 2
+            x2 = cx + w / 2
+            y2 = cy + h / 2
+
+            boxes.append(Box([x1, y1, x2, y2], float(conf)))
+
         return Results(boxes, orig_shape)
 
     def _convert_ultralytics_to_results(self, ultralytics_result):
