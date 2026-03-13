@@ -7,7 +7,7 @@ def sigmoid(x):
 
 # 1. Setup
 rknn = RKNNLite()
-rknn.load_rknn('model_test_backup.rknn')
+rknn.load_rknn('model_test_not_quant.rknn')
 rknn.init_runtime(core_mask=RKNNLite.NPU_CORE_0)
 
 # 2. Preprocess
