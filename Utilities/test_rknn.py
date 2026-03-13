@@ -21,8 +21,8 @@ img = cv2.imread("Images/1.png")
 orig = img.copy()
 
 img = cv2.resize(img, (640,640))
-img = img.astype(np.float32) / 255.0
 img = np.expand_dims(img,0)
+img = np.ascontiguousarray(img)
 
 
 # -----------------
