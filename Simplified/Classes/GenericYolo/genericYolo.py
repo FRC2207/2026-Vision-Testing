@@ -147,7 +147,8 @@ class YoloWrapper:
             x_c, y_c, w, h, conf = row[:5]
             if conf == 0:
                 continue
-            conf = float(self._sigmoid(conf))
+            # conf = float(self._sigmoid(conf)) This model actually outputs confidence!
+            conf = float(conf)
 
             # Debug: log first few boxes
             if i < 10:
