@@ -69,7 +69,7 @@ class Camera:
 
         if source.lower().endswith((".png", ".jpg", ".jpeg", ".bmp")):
             self.is_image = True
-            self.image = cv2.imread(source)
+            self.image = self._preprocess_for_rknn(cv2.imread(source))
             if self.image is None:
                 raise ValueError(f"Failed to read image {source}")
         else:
