@@ -78,15 +78,12 @@ class Camera:
             self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
 
             if not self.cap.isOpened():
+                self.logger.error(f"Cannot open source {self.source}")
                 raise ValueError(f"Cannot open source {source}")
         self.stopped = False
         # self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
         # self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
         # time.sleep(0.5)
-
-        if not self.cap.isOpened():
-            self.logger.error(f"Cannot open source {self.source}")
-            raise ValueError(f"Cannot open source {self.source}")
 
         self.focal_length_pixels = (
             self.known_calibration_pixel_height * self.known_calibration_distance
