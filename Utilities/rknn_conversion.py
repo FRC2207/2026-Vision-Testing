@@ -16,10 +16,10 @@ rknn.load_onnx(
 )
 
 rknn.build(
-    do_quantization=False
-    # dataset='Images/RknnDataset/dataset.txt'
+    do_quantization=True,
+    dataset='Images/RknnDataset/dataset.txt'
 )
 
-rknn.export_rknn('model_test_not_quant.rknn')
+rknn.export_rknn('model_test_quant.rknn')
 
 rknn.release()
