@@ -110,4 +110,41 @@ y2_b = int(raw_box[3])
 print(f"Raw NPU Values: {raw_box[:4]}")
 print(f"Strategy A (Center-based): [{x1_a}, {y1_a}, {x2_a}, {y2_a}]")
 print(f"Strategy B (Corner-based):  [{x1_b}, {y1_b}, {x2_b}, {y2_b}]")
+
+# Define decoding strategies
+# Each tuple: (scale_factor, use_center_math)
+strategies = [
+    (1.0, True),   # A: 640x640 absolute (Standard)
+    (640.0, True), # B: Normalized 0-1 (e.g. YOLOv8 format)
+    (1.0, False),  # C: Absolute Corners (No w/2 calculation)
+    (640.0, False) # D: Normalized Corners
+]
+
+for idx, (scale, use_center) in enumerate(strategies):
+    temp_img = img.copy()
+    print(f"\n--- Generating Gallery {idx} | Scale: {scale} | CenterMath: {use_center} ---")
+    
+    boxes_for_nms = []
+    scores_for_nms = []
+    
+    for i in range(len(data)):
+        x, y, w, h, conf = data[i]
+        
+        # Apply scaling
+        x, y, w, h = x * scale, y * scale, w * scale, h * scale
+        
+        if use_center:
+            x1, y1 = int(x - w / 2), int(y - h / 2)
+            x2, y2 = int(x + w / 2), int(y + h / 2)
+        else:
+            x1, y1 = int(x), int(y)
+            x2, y2 = int(w), int(h) # In corner format, w/h are actually x2/y2
+            
+        if conf > 0.4:
+            cv2.rectangle(temp_img, (x1, y1), (x2, y2), (0, 255, 0), 2)
+            boxes_for_nms.append([x1, y1, x2-x1, y2-y1])
+            scores_for_nms.append(float(conf))
+            
+    cv2.imwrite(f'detected_strategy_{idx}.png', temp_img)
+    print(f"Saved: detected_strategy_{idx}.png")
 rknn.release()
