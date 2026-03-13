@@ -7,8 +7,7 @@ rknn.config(
     mean_values=[[0,0,0]],
     std_values=[[255,255,255]],
     # disable_rules=['fuse_exmatmul_add_mul_exsoftmax13_exmatmul_to_sdpa'],
-    quantized_dtype='w8a8',
-    quantized_hybrid_level=2 ,
+    quantized_dtype='w8a8'
 )
 
 rknn.load_onnx(
@@ -17,8 +16,8 @@ rknn.load_onnx(
 )
 
 rknn.build(
-    do_quantization=True,
-    dataset='Images/RknnDataset/dataset.txt'
+    do_quantization=False
+    # dataset='Images/RknnDataset/dataset.txt'
 )
 
 rknn.export_rknn('model.rknn')
