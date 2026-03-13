@@ -12,7 +12,7 @@ rknn.config(
 )
 
 rknn.load_onnx(
-    model='YoloModels/v26/nano/NoEnd2End/color-3.1-v26.onnx',
+    model='YoloModels/v26/nano/NoNMS-End2End-Half/color-3.1-v26.onnx',
     outputs=["output0"]
 )
 
@@ -21,6 +21,6 @@ rknn.build(
     dataset='Images/RknnDataset/dataset.txt'
 )
 
-rknn.export_rknn('model_test_hybrid_quant.rknn')
+rknn.export_rknn('model.rknn')
 
 rknn.release()

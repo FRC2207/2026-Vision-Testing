@@ -23,7 +23,7 @@ def letterbox(img, target_size=(640, 640)):
     return padded, scale, left, top
 
 rknn = RKNNLite()
-rknn.load_rknn("YoloModels/model_test_quant.rknn")
+rknn.load_rknn("YoloModels/v26/nano/NoNMS-End2End-Half/model.rknn")
 rknn.init_runtime(core_mask=RKNNLite.NPU_CORE_0)
 
 img = cv2.imread("Images/1.png")

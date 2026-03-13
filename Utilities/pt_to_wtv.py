@@ -1,6 +1,6 @@
 from ultralytics import YOLO
 
-model = YOLO("YoloModels/v26/nano/test/color-3.1-v26.pt", task="detect")
+model = YOLO("YoloModels/v26/nano/NoNMS-End2End-Half/color-3.1-v26.pt", task="detect")
 
 model.export(
     format='onnx',
