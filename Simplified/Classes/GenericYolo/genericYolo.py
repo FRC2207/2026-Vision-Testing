@@ -153,7 +153,7 @@ class YoloWrapper:
             if i < 10:
                 self.logger.info(f"Box {i}: raw={row}, sigmoid(conf)={conf:.4f}")
 
-            if conf < 0.6:  # Use working script threshold
+            if conf < 0.1:  # Use working script threshold
                 continue
 
             # Map coordinates back to original image
