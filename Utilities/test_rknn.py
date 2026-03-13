@@ -106,5 +106,5 @@ for i in indices:
         2
     )
 
-cv2.imwrite("detected.png", orig)
+cv2.imwrite("Images/detected.png", orig)
 rknn.release()
