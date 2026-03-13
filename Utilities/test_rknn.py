@@ -18,6 +18,7 @@ input_data = np.expand_dims(img_resized, axis=0)
 
 # 3. Inference
 outputs = rknn.inference(inputs=[input_data])
+print(f"Inference output shape: {[o.shape for o in outputs]}")
 raw_data = outputs[0][0] # Shape (5, 8400)
 data = raw_data.T        # Shape (8400, 5)
 
