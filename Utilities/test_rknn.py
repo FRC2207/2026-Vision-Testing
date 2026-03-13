@@ -64,7 +64,7 @@ for row in data:
     if conf == 0:  # Remove zeros before sigmoid
         continue
     conf = sigmoid(conf)
-    if conf < 0.4:
+    if conf < 0.6:
         continue
 
     # Convert from model coordinates to original image coordinates
@@ -82,6 +82,9 @@ for row in data:
     y1 = max(0, min(y1, orig_h - 1))
     x2 = max(0, min(x2, orig_w - 1))
     y2 = max(0, min(y2, orig_h - 1))
+
+    if (x2 - x1) <= 0 or (y2 - y1) <= 0:
+        continue
 
     boxes.append([x1, y1, x2-x1, y2-y1])
     scores.append(float(conf))
