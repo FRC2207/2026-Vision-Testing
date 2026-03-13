@@ -314,7 +314,7 @@ class Camera:
             if robot_point is not None:
                 map_points.append(robot_point)
 
-        return np.array(map_points) if map_points else np.empty((0, 2))
+        return np.array(map_points) if map_points else np.empty((0, 2)), frame
 
     def calculate_from_mosaic(self, local_x, local_y, local_w, local_h):
         img_w = self.cap.get(cv2.CAP_PROP_FRAME_WIDTH) or 640

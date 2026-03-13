@@ -55,7 +55,8 @@ if __name__ == "__main__":
 
         # Create planner
         try:
-            fuel_positions = fuel_list_to_numpy(camera.run())
+            raw_fuel_positions, annotated_frame = camera.run()
+            fuel_positions = fuel_list_to_numpy(raw_fuel_positions)
         except:
             fuel_positions = []
 
@@ -81,11 +82,10 @@ if __name__ == "__main__":
                 print(fuel_position)
 
             if constants.APP_MODE:
-                frame = camera.get_frame()
-                if frame is None:
-                    logger.warning("Frame not returned from camera.get_frame()")
+                if annotated_frame is None:
+                    logger.warning("Frame not returned from camera.run()")
                 else:
-                    camera_app.set_frame(frame)
+                    camera_app.set_frame(annotated_frame)
 
             if len(fuel_positions) == 0:
                 logger.warning("No fuel positions detected. Skipping loop iteration.")
