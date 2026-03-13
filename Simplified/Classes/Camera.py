@@ -123,15 +123,17 @@ class Camera:
         
     def _preprocess_for_rknn(self, frame):
         if frame is not None:
-            img = cv2.resize(frame, (640, 640))
-            img = img.astype(np.uint8)
-            img = np.ascontiguousarray(img)
-            img = img[None, :, :, :]
-            img = img.transpose(0, 3, 1, 2)  # Convert NHWC -> NCHW
-            return img
+            img_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            img_resized = cv2.resize(img_rgb, (640, 640))
+            
+            img_normalized = img_resized.astype(np.float32) / 255.0
+            
+            img_input = np.expand_dims(img_normalized, 0)
+            img_input = np.ascontiguousarray(img_input)
+            return img_input
         else:
             return None
-
+        
     def get_yolo_data(self):
         # self.logger.info("Calling: self.get_frame()")
         frame = self.get_frame()

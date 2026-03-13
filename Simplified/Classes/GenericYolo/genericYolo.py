@@ -147,14 +147,15 @@ class YoloWrapper:
             x_c, y_c, w, h, conf = row[:5]
             if conf == 0:
                 continue
-            # conf = float(self._sigmoid(conf)) This model actually outputs confidence!
+            
+            # RKNN model already outputs confidence in [0,1]
             conf = float(conf)
 
             # Debug: log first few boxes
             if i < 10:
-                self.logger.info(f"Box {i}: raw={row}, sigmoid(conf)={conf:.4f}")
+                self.logger.info(f"Box {i}: raw={row}, conf={conf:.4f}")
 
-            if conf < 0.1:  # Use working script threshold
+            if conf < 0.1:  # working threshold
                 continue
 
             # Map coordinates back to original image
@@ -182,7 +183,7 @@ class YoloWrapper:
 
         # Apply NMS using x,y,w,h format
         nms_boxes = [[b.xyxy[0], b.xyxy[1], b.xyxy[2]-b.xyxy[0], b.xyxy[3]-b.xyxy[1]] for b in boxes]
-        indices = cv2.dnn.NMSBoxes(nms_boxes, scores, score_threshold=0.4, nms_threshold=0.45)
+        indices = cv2.dnn.NMSBoxes(nms_boxes, scores, score_threshold=0.1, nms_threshold=0.45)
         indices = indices.flatten() if len(indices) > 0 else []
 
         self.logger.info(f"Indices after NMS: {indices}")
