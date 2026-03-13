@@ -21,6 +21,23 @@ outputs = rknn.inference(inputs=[input_data])
 raw_data = outputs[0][0] # Shape (5, 8400)
 data = raw_data.T        # Shape (8400, 5)
 
+# --- DEBUG: Print Raw Data for top 5 scores ---
+# Sort by confidence (index 4)
+sorted_indices = np.argsort(data[:, 4])[::-1]
+print("\n--- TOP 5 RAW DATA (Verify Coordinates) ---")
+for i in range(5):
+    idx = sorted_indices[i]
+    box = data[idx]
+    print(f"Raw Output {i}: X={box[0]:.2f}, Y={box[1]:.2f}, W={box[2]:.2f}, H={box[3]:.2f}, Conf={box[4]:.2f}")
+
+# --- Decode and Filter ---
+# If your model was trained with Sigmoid, this is correct:
+confidences = sigmoid(data[:, 4])
+# If your model was trained with Softmax or is already activated, 
+# you might not need sigmoid() at all. Try removing it if confidences are all 1.0 or 0.0.
+
+# (Keep your existing NMS logic below)
+
 # 4. Decode and Filter
 # Column 4 is confidence. Apply sigmoid if raw logits
 confidences = sigmoid(data[:, 4])
@@ -64,6 +81,6 @@ print(f"Final detections after NMS: {len(indices)}")
 for i in indices:
     box = boxes[i]
     print(f"Detection {i}: {box} Conf: {confidences[i]:.2f}")
-    
+
 cv2.imwrite('detected_1.png', original_img)
 rknn.release()
