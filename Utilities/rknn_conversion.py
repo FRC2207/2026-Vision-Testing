@@ -11,7 +11,6 @@ rknn.config(
 
 rknn.load_onnx(
     model='YoloModels/v26/nano/NoEnd2End/color-3.1-v26.onnx',
-    input_size_list=[[1,640,640,3]],
     outputs=["output0"]
 )
 
