@@ -163,10 +163,11 @@ class YoloWrapper:
             w /= scale
             h /= scale
 
-            x1 = max(0, int(x - w / 2))
-            y1 = max(0, int(y - h / 2))
-            x2 = min(orig_w - 1, int(x + w / 2))
-            y2 = min(orig_h - 1, int(y + h / 2))
+            # Now calculate corners
+            x1 = int(x - w / 2)
+            y1 = int(y - h / 2)
+            x2 = int(x + w / 2)
+            y2 = int(y + h / 2)
 
             if (x2 - x1) <= 0 or (y2 - y1) <= 0:
                 continue

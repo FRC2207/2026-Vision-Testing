@@ -137,15 +137,29 @@ class Camera:
             return self._preprocess_for_rknn(frame)
             
         return frame
+    
+    def _letterbox(img, target_size=(640, 640)):
+        h, w = img.shape[:2]
+        target_w, target_h = target_size
+        scale = min(target_w / w, target_h / h)
+        new_w, new_h = int(w * scale), int(h * scale)
+        resized = cv2.resize(img, (new_w, new_h))
+        
+        pad_w = target_w - new_w
+        pad_h = target_h - new_h
+        top = pad_h // 2
+        bottom = pad_h - top
+        left = pad_w // 2
+        right = pad_w - left
+        padded = cv2.copyMakeBorder(resized, top, bottom, left, right, cv2.BORDER_CONSTANT, value=(114,114,114))
+        return padded, scale, left, top
 
     def _preprocess_for_rknn(self, frame):
         if frame is not None:
             img_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            img_resized = cv2.resize(img_rgb, (640, 640))
-            
-            img_normalized = img_resized.astype(np.float32) / 255.0
-            
-            img_input = np.expand_dims(img_normalized, 0)
+            img_resized, _, _, _ = self._letterbox(frame, (640, 640))
+        
+            img_input = np.expand_dims(img_resized, 0)
             img_input = np.ascontiguousarray(img_input)
             return img_input
         else:
