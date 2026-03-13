@@ -1,42 +1,46 @@
-from rknnlite.api import RKNNLite
 import cv2
 import numpy as np
+from rknnlite.api import RKNNLite
 
-# Initialize
+def sigmoid(x):
+    return 1 / (1 + np.exp(-x))
+
+# 1. Setup
 rknn = RKNNLite()
 rknn.load_rknn('model_test_backup.rknn')
 rknn.init_runtime(core_mask=RKNNLite.NPU_CORE_0)
 
-# Preprocess (CRITICAL: Match your training normalization)
+# 2. Preprocess
 img = cv2.imread('Images/1.png')
-img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-img = cv2.resize(img, (640, 640))
-img = np.expand_dims(img, axis=0)
+original_img = img.copy()
+img_resized = cv2.resize(img, (640, 640))
+input_data = np.expand_dims(img_resized, axis=0)
 
-# Inference
-outputs = rknn.inference(inputs=[img])
+# 3. Inference
+outputs = rknn.inference(inputs=[input_data])
+raw_data = outputs[0][0] # Shape (5, 8400)
+data = raw_data.T        # Shape (8400, 5)
 
-# DIAGNOSTIC: Look at the data
-print(f"Number of output tensors: {len(outputs)}")
-print(f"Shape of first output: {outputs[0].shape}")
-# If this shape is (1, 300, 85) or similar, the model is working!
-# If it is (1, 8400, ...), you are reading the raw grid.
-print(f"Sample raw values (first 10): {outputs[0][0][:10]}")
+# 4. Decode and Filter
+# Column 4 is confidence. Apply sigmoid if raw logits
+confidences = sigmoid(data[:, 4])
+boxes = data[confidences > 0.5] 
+conf_scores = confidences[confidences > 0.5]
 
-# Assuming outputs[0] is (1, 5, 8400)
-raw_data = outputs[0][0] # Shape: (5, 8400)
-data = raw_data.T        # Shape: (8400, 5) -> [x, y, w, h, confidence]
+print(f"Found {len(boxes)} potential objects!")
 
-# 1. Filter by confidence
-CONF_THRESHOLD = 0.5 
-# This line keeps only rows where the 5th column (index 4) > 0.5
-valid_detections = data[data[:, 4] > CONF_THRESHOLD]
-
-print(f"Found {len(valid_detections)} objects above confidence threshold!")
-
-# 2. Display valid detections
-for det in valid_detections:
-    x, y, w, h, conf = det
-    print(f"Object found at x={x:.2f}, y={y:.2f} with confidence {conf:.4f}")
+# 5. Visualize
+for i, box in enumerate(boxes):
+    x, y, w, h = box[:4]
+    # Assuming coordinates are already absolute for 640x640
+    # Convert center_x, center_y, w, h to x1, y1, x2, y2
+    x1 = int(x - w / 2)
+    y1 = int(y - h / 2)
+    x2 = int(x + w / 2)
+    y2 = int(y + h / 2)
     
+    cv2.rectangle(original_img, (x1, y1), (x2, y2), (0, 255, 0), 2)
+    print(f"Object {i}: {x1, y1, x2, y2} Conf: {conf_scores[i]:.2f}")
+
+cv2.imwrite('detected_1.png', original_img)
 rknn.release()
