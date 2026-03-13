@@ -67,9 +67,19 @@ class Camera:
 
         self.last_time = time.perf_counter()
 
-        self.cap = cv2.VideoCapture(self.source, cv2.CAP_V4L2)
+        if source.lower().endswith((".png", ".jpg", ".jpeg", ".bmp")):
+            self.is_image = True
+            self.image = cv2.imread(source)
+            if self.image is None:
+                raise ValueError(f"Failed to read image {source}")
+        else:
+            # Assume it's a video file or webcam index
+            self.cap = cv2.VideoCapture(source)
+            self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+
+            if not self.cap.isOpened():
+                raise ValueError(f"Cannot open source {source}")
         self.stopped = False
-        self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
         # self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
         # self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
         # time.sleep(0.5)
@@ -113,14 +123,18 @@ class Camera:
             time.sleep(0.01) # Help not overuse CPU
 
     def get_frame(self):
-        with self.frame_lock:
-            if self.frame is None:
-                self.logger.warning(f"self.frame was None")
-                return None
-            # self.logger.info(self.frame.copy())
-            return self.frame.copy()
-        # return self.frame
-        
+        if self.is_image:
+            self.stopped = True  # Only return the image once
+            return self.image.copy()
+        else:
+            with self.frame_lock:
+                if self.frame is None:
+                    self.logger.warning(f"self.frame was None")
+                    return None
+                # self.logger.info(self.frame.copy())
+                return self.frame.copy()
+            # return self.frame
+
     def _preprocess_for_rknn(self, frame):
         if frame is not None:
             img_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -134,6 +148,10 @@ class Camera:
         else:
             return None
         
+    def release(self):
+        if not self.is_image and hasattr(self, "cap") and self.cap:
+            self.cap.release()
+
     def get_yolo_data(self):
         # self.logger.info("Calling: self.get_frame()")
         frame = self.get_frame()
