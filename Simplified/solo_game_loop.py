@@ -72,7 +72,11 @@ if __name__ == "__main__":
         while True:
             start_time = time.perf_counter()
             # logger.info("Running: camera.run()")
-            fuel_positions = numpy_to_fuel_list(camera.run())
+            try:
+                raw_fuel_positions, annotated_frame = camera.run()
+                fuel_positions = fuel_list_to_numpy(raw_fuel_positions)
+            except:
+                fuel_positions = []
 
             fuel_tracker.set_fuel_list(fuel_positions)
             fuel_tracker.sort()
