@@ -6,7 +6,6 @@ def test_inference(rknn_model_path, image_path):
     rknn = RKNNLite()
     
     # 1. Load model
-    print(f"--> Loading model: {rknn_model_path}")
     if rknn.load_rknn(rknn_model_path) != 0:
         print("Failed to load model!"); return
 
@@ -14,24 +13,22 @@ def test_inference(rknn_model_path, image_path):
     if rknn.init_runtime(core_mask=RKNNLite.NPU_CORE_0) != 0:
         print("Failed to init runtime!"); return
 
-    # 3. Query output attributes (The correct way for RKNNLite)
-    # This returns a list of objects containing scale and zp
-    output_attrs = rknn.query(query=RKNNLite.RKNN_QUERY_OUTPUT_ATTR, index=None)
+    # 3. Get Output Attributes
+    # In rknn-toolkit-lite2, use get_output_info() to get quantization details
+    output_info = rknn.get_output_info()
     
-    # 4. Prepare image
+    # 4. Run inference
     img = Image.open(image_path).convert('RGB').resize((640, 640))
     input_data = np.expand_dims(np.array(img, dtype=np.uint8), 0)
-
-    # 5. Run inference
     outputs = rknn.inference(inputs=[input_data])
 
-    # 6. De-quantize outputs
+    # 5. De-quantize
     for i, out in enumerate(outputs):
-        # Access scale and zp from the queried attributes
-        scale = output_attrs[i].qnt_scale
-        zp = output_attrs[i].qnt_zp
+        # Access attributes directly from the info object
+        scale = output_info[i].qnt_scale
+        zp = output_info[i].qnt_zp
         
-        # De-quantize
+        # De-quantization: (int8_value - zp) * scale
         float_output = (out.astype(np.float32) - zp) * scale
         
         print(f"Output {i} shape: {float_output.shape}")
