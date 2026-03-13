@@ -83,4 +83,30 @@ for i in indices:
     print(f"Detection {i}: {box} Conf: {confidences[i]:.2f}")
 
 cv2.imwrite('detected_1.png', original_img)
+
+# --- DEBUG: Comparative Decoding Test ---
+print("\n--- COMPARATIVE COORDINATE TEST ---")
+# Pick top index
+top_idx = sorted_indices[0] 
+raw_box = data[top_idx] # [x, y, w, h] (raw values)
+
+# Strategy A: Standard YOLO (Center-Point)
+x1_a = int(raw_box[0] - raw_box[2] / 2)
+y1_a = int(raw_box[1] - raw_box[3] / 2)
+x2_a = int(raw_box[0] + raw_box[2] / 2)
+y2_a = int(raw_box[1] + raw_box[3] / 2)
+
+# Strategy B: Corner-Points (Top-Left, Bottom-Right)
+x1_b = int(raw_box[0])
+y1_b = int(raw_box[1])
+x2_b = int(raw_box[2])
+y2_b = int(raw_box[3])
+
+# Strategy C: Offset-from-Grid (Sometimes used in custom models)
+# This assumes x,y are grid offsets, and w,h are log-scale multipliers
+# (Common if output seems to be clustered in one corner)
+
+print(f"Raw NPU Values: {raw_box[:4]}")
+print(f"Strategy A (Center-based): [{x1_a}, {y1_a}, {x2_a}, {y2_a}]")
+print(f"Strategy B (Corner-based):  [{x1_b}, {y1_b}, {x2_b}, {y2_b}]")
 rknn.release()
