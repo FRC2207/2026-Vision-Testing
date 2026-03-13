@@ -78,6 +78,11 @@ for row in data:
     x2 = int(x + w/2)
     y2 = int(y + h/2)
 
+    x1 = max(0, min(x1, orig_w - 1))
+    y1 = max(0, min(y1, orig_h - 1))
+    x2 = max(0, min(x2, orig_w - 1))
+    y2 = max(0, min(y2, orig_h - 1))
+
     boxes.append([x1, y1, x2-x1, y2-y1])
     scores.append(float(conf))
 
