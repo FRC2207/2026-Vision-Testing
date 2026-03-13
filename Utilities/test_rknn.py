@@ -80,41 +80,56 @@ print("Total predictions:", len(data))
 # -------------------------------
 # Decode predictions
 # -------------------------------
+strides = [8,16,32]
+grids = [80,40,20]
+
 boxes = []
 scores = []
 
-for i in range(len(data)):
+start = 0
 
-    x, y, w, h, conf = data[i]
+for stride, g in zip(strides, grids):
 
-    conf = sigmoid(conf)
+    count = g * g
+    layer = data[start:start+count]
+    start += count
 
-    if conf < 0.4:
-        continue
+    for i in range(count):
 
-    # convert center → corners
-    x1 = x - w/2
-    y1 = y - h/2
-    x2 = x + w/2
-    y2 = y + h/2
+        row = i // g
+        col = i % g
 
-    # undo letterbox
-    x1 = (x1 - dw) / r
-    y1 = (y1 - dh) / r
-    x2 = (x2 - dw) / r
-    y2 = (y2 - dh) / r
+        x,y,w,h,conf = layer[i]
 
-    x1 = int(max(0, x1))
-    y1 = int(max(0, y1))
-    x2 = int(min(original_img.shape[1], x2))
-    y2 = int(min(original_img.shape[0], y2))
+        conf = sigmoid(conf)
 
-    boxes.append([x1, y1, x2-x1, y2-y1])
-    scores.append(float(conf))
+        if conf < 0.4:
+            continue
 
+        # decode
+        cx = (sigmoid(x) + col) * stride
+        cy = (sigmoid(y) + row) * stride
+        bw = np.exp(w) * stride
+        bh = np.exp(h) * stride
 
-print("Candidates:", len(boxes))
+        x1 = cx - bw/2
+        y1 = cy - bh/2
+        x2 = cx + bw/2
+        y2 = cy + bh/2
 
+        # undo letterbox
+        x1 = (x1 - dw) / r
+        y1 = (y1 - dh) / r
+        x2 = (x2 - dw) / r
+        y2 = (y2 - dh) / r
+
+        x1 = int(max(0,x1))
+        y1 = int(max(0,y1))
+        x2 = int(min(original_img.shape[1],x2))
+        y2 = int(min(original_img.shape[0],y2))
+
+        boxes.append([x1,y1,x2-x1,y2-y1])
+        scores.append(conf)
 
 # -------------------------------
 # Apply NMS
