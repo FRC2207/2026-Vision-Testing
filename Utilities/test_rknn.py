@@ -1,36 +1,43 @@
 import numpy as np
-from rknn.api import RKNN
-import os
+from rknnlite.api import RKNNLite
 from PIL import Image
 
 def test_inference(rknn_model_path, image_path):
-    rknn = RKNN(verbose=False)
+    rknn = RKNNLite()
     
-    print(f"Loading model: {rknn_model_path}")
-    ret = rknn.load_rknn(rknn_model_path)
-    if ret != 0:
-        print("Failed to load model!")
-        return
+    # 1. Load model
+    print(f"--> Loading model: {rknn_model_path}")
+    if rknn.load_rknn(rknn_model_path) != 0:
+        print("Failed to load model!"); return
 
-    print("Initializing Runtime")
-    ret = rknn.init_runtime(target='rk3588')
-    if ret != 0:
-        print("Failed to init runtime!")
-        return
+    # 2. Init runtime (NPU_CORE_0 is usually standard for RK3588)
+    if rknn.init_runtime(core_mask=RKNNLite.NPU_CORE_0) != 0:
+        print("Failed to init runtime!"); return
+
+    # 3. Get quantization parameters (Crucial for INT8)
+    # Query output attributes to get scale and zero_point
+    output_attrs = rknn.list_outputs() # Returns list of dictionaries with metadata
     
-    img = Image.open(image_path).convert('RGB')
-    img = img.resize((640, 640))
-    img_data = np.array(img, dtype=np.uint8)
+    # 4. Prepare image
+    img = Image.open(image_path).convert('RGB').resize((640, 640))
+    input_data = np.expand_dims(np.array(img, dtype=np.uint8), 0)
 
-    input_data = np.expand_dims(img_data, 0)
-
-    print("Running inference")
+    # 5. Run inference
     outputs = rknn.inference(inputs=[input_data])
 
-    print(f"Output type: {type(outputs)}")
-    print(f"Number of outputs: {len(outputs)}")
-    print(f"Shape of first output: {outputs[0].shape}")
-    print(f"First 10 values of output: {outputs[0].flatten()[:10]}")
+    # 6. De-quantize outputs
+    # RKNNLite.list_outputs() usually provides the 'scale' and 'zp' (zero_point)
+    # We iterate through outputs to convert them back to float32
+    for i, out in enumerate(outputs):
+        scale = output_attrs[i]['scale']
+        zp = output_attrs[i]['zp']
+        
+        # De-quantization formula: (int8 - zp) * scale
+        # Cast to float32 first to avoid overflow
+        float_output = (out.astype(np.float32) - zp) * scale
+        
+        print(f"Output {i} shape: {float_output.shape}")
+        print(f"Sample de-quantized values: {float_output.flatten()[:10]}")
 
     rknn.release()
 
