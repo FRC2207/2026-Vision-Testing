@@ -45,11 +45,14 @@ img_input = np.ascontiguousarray(img_input)
 # -----------------
 outputs = rknn.inference(inputs=[img_input])
 raw = outputs[0][0]          
-data = raw.T                 
+data = raw.T         
+        
 
 # Filter invalid rows
 valid_mask = ~np.isinf(data).any(axis=1) & ~np.isnan(data).any(axis=1)
 data = data[valid_mask]
+raw_confidences = data[:, 4]
+print("Confidence stats: min, max, mean", raw_confidences.min(), raw_confidences.max(), raw_confidences.mean())
 
 print("Shape after filtering:", data.shape)
 
