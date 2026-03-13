@@ -3,7 +3,7 @@ from rknnlite.api import RKNNLite
 from PIL import Image
 
 rknn = RKNNLite()
-rknn.load_rknn("YoloModels/v26/nano/NoNMS/model_test.rknn")
+rknn.load_rknn("model.rknn")
 rknn.init_runtime()
 
 img = Image.open('Images/2.png').convert('RGB').resize((640, 640))
