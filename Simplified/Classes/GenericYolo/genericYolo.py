@@ -114,22 +114,22 @@ class YoloWrapper:
         return results_list if is_list else results_list[0]
 
     def _convert_rknn_outputs(self, frame_output, orig_shape):
-        self.logger.info(f"Original frame_output shape: {frame_output.shape}")
+        # self.logger.info(f"Original frame_output shape: {frame_output.shape}")
 
         # Squeeze batch dimension if present
         if frame_output.ndim == 3:
             frame_output = frame_output[0]
-            self.logger.info(f"Squeezed frame_output shape: {frame_output.shape}")
+            # self.logger.info(f"Squeezed frame_output shape: {frame_output.shape}")
 
         # Transpose RKNN output to [num_boxes, 5] if needed
         if frame_output.shape[0] == 5 and frame_output.shape[1] > 5:
             frame_output = frame_output.T
-            self.logger.info(f"Transposed frame_output shape: {frame_output.shape}")
+            # self.logger.info(f"Transposed frame_output shape: {frame_output.shape}")
 
         # Remove invalid rows
         valid_mask = ~np.isinf(frame_output).any(axis=1) & ~np.isnan(frame_output).any(axis=1)
         frame_output = frame_output[valid_mask]
-        self.logger.info(f"After filtering invalid rows, frame_output shape: {frame_output.shape}")
+        # self.logger.info(f"After filtering invalid rows, frame_output shape: {frame_output.shape}")
 
         # Compute letterbox padding and scaling
         orig_h, orig_w = orig_shape[:2]
@@ -151,9 +151,8 @@ class YoloWrapper:
             # RKNN model already outputs confidence in [0,1]
             conf = float(conf)
 
-            # Debug: log first few boxes
-            if i < 10:
-                self.logger.info(f"Box {i}: raw={row}, conf={conf:.4f}")
+            # if i < 10:
+                # self.logger.info(f"Box {i}: raw={row}, conf={conf:.4f}")
 
             if conf < 0.1:  # working threshold
                 continue
@@ -175,7 +174,7 @@ class YoloWrapper:
             boxes.append(Box([x1, y1, x2, y2], conf))
             scores.append(conf)
 
-        self.logger.info(f"Number of boxes before NMS: {len(boxes)}")
+        # self.logger.info(f"Number of boxes before NMS: {len(boxes)}")
 
         if not boxes:
             self.logger.info("No boxes passed confidence threshold.")
@@ -186,9 +185,9 @@ class YoloWrapper:
         indices = cv2.dnn.NMSBoxes(nms_boxes, scores, score_threshold=0.1, nms_threshold=0.45)
         indices = indices.flatten() if len(indices) > 0 else []
 
-        self.logger.info(f"Indices after NMS: {indices}")
+        # self.logger.info(f"Indices after NMS: {indices}")
         final_boxes = [boxes[i] for i in indices]
-        self.logger.info(f"Number of final boxes: {len(final_boxes)}")
+        # self.logger.info(f"Number of final boxes: {len(final_boxes)}")
 
         return Results(final_boxes, orig_shape)
 

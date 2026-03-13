@@ -75,7 +75,7 @@ class Camera:
         else:
             # Assume it's a video file or webcam index
             self.cap = cv2.VideoCapture(source)
-            self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+            # self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
 
             if not self.cap.isOpened():
                 self.logger.error(f"Cannot open source {self.source}")
@@ -94,16 +94,17 @@ class Camera:
         if not self.is_image:
             self.frame_lock = threading.Lock()
             threading.Thread(target=self._reader, daemon=True).start()
-            
+
     def _reader(self):
-        self.logger.info(f"self.stopped: {self.stopped}")
+        # self.logger.info(f"self.stopped: {self.stopped}")
         while not self.stopped:
-            self.logger.debug("Attempting to grab frame.")
+            # self.logger.debug("Attempting to grab frame.")
             ret, frame = self.cap.read()
-            self.logger.debug(f"Frame grabbed: {frame}")
+            # self.logger.debug(f"Frame grabbed: {frame}")
             if not ret:
                 self.logger.warning(f"Failed to retrieve frame from, attempting to continue: {self.source}")
                 # raise ValueError(f"Failed to retrieve frame from: {self.source}")
+                time.sleep(0.05)
                 continue
             if self.grayscale:
                 frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
