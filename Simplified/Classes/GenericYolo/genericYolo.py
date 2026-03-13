@@ -25,7 +25,13 @@ class Results:
             x1, y1, x2, y2 = map(int, box.xyxy)
             cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
         return frame
-
+    
+    def __str__(self):
+        s = f"Results(orig_shape={self.orig_shape}, num_boxes={len(self.boxes)})\n"
+        for i, box in enumerate(self.boxes):
+            s += f"  Box {i}: xyxy={box.xyxy}, conf={box.conf:.3f}\n"
+        return s
+    
 class YoloWrapper:
     def __init__(self, model_file: str, input_size=(640, 640)):
         self.model_file = model_file
