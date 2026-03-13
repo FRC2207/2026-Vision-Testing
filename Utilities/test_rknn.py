@@ -55,7 +55,7 @@ for row in data:
     x, y, w, h, conf = row
     if conf == 0:  # Remove zeros before sigmoid
         continue
-    conf = sigmoid(conf)
+    conf = float(conf)
     if conf < 0.6:
         continue
 
