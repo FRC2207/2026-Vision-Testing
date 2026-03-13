@@ -138,7 +138,7 @@ class Camera:
             
         return frame
     
-    def _letterbox(img, target_size=(640, 640)):
+    def _letterbox(self, img, target_size=(640, 640)):
         h, w = img.shape[:2]
         target_w, target_h = target_size
         scale = min(target_w / w, target_h / h)
