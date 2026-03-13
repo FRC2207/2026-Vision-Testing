@@ -23,4 +23,20 @@ print(f"Shape of first output: {outputs[0].shape}")
 # If it is (1, 8400, ...), you are reading the raw grid.
 print(f"Sample raw values (first 10): {outputs[0][0][:10]}")
 
+# Assuming outputs[0] is (1, 5, 8400)
+raw_data = outputs[0][0] # Shape: (5, 8400)
+data = raw_data.T        # Shape: (8400, 5) -> [x, y, w, h, confidence]
+
+# 1. Filter by confidence
+CONF_THRESHOLD = 0.5 
+# This line keeps only rows where the 5th column (index 4) > 0.5
+valid_detections = data[data[:, 4] > CONF_THRESHOLD]
+
+print(f"Found {len(valid_detections)} objects above confidence threshold!")
+
+# 2. Display valid detections
+for det in valid_detections:
+    x, y, w, h, conf = det
+    print(f"Object found at x={x:.2f}, y={y:.2f} with confidence {conf:.4f}")
+    
 rknn.release()
