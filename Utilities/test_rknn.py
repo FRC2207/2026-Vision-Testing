@@ -1,78 +1,95 @@
 import cv2
 import numpy as np
-from rknnlite2.api import RKNNLite
+from rknnlite.api import RKNNLite
 
-# ------------------------------
-# CONFIG
-# ------------------------------
-RKNN_MODEL = "model_test_not_quant.rknn"
-IMAGE_PATH = "Images/1.png"
-OUTPUT_PATH = "Images/1_out.png"
-CONFIDENCE_THRESHOLD = 0.3
-IMAGE_WIDTH, IMAGE_HEIGHT = 640, 640  # match training size
+def sigmoid(x):
+    return 1 / (1 + np.exp(-x))
 
-# ------------------------------
-# LOAD RKNN MODEL
-# ------------------------------
+# -----------------
+# Load RKNN model
+# -----------------
 rknn = RKNNLite()
-rknn.load_rknn(RKNN_MODEL)
+rknn.load_rknn("model_test_not_quant.rknn")
 rknn.init_runtime(core_mask=RKNNLite.NPU_CORE_0)
 
-# ------------------------------
-# LOAD AND RESIZE IMAGE
-# ------------------------------
-img = cv2.imread(IMAGE_PATH)
-img_resized = cv2.resize(img, (IMAGE_WIDTH, IMAGE_HEIGHT))
+# -----------------
+# Load and preprocess image
+# -----------------
+img = cv2.imread("Images/1.png")
+orig = img.copy()
+img_resized = cv2.resize(img, (640, 640))
+img_input = np.expand_dims(img_resized, 0).astype(np.float32)  # Ensure float32
+img_input = np.ascontiguousarray(img_input)
 
-# ------------------------------
-# INFERENCE
-# ------------------------------
-outputs = rknn.inference(inputs=[img_resized])
-raw = outputs[0]  # assuming single output
-print("Raw predictions shape:", raw.shape)
+# -----------------
+# Run inference
+# -----------------
+outputs = rknn.inference(inputs=[img_input])
+raw = outputs[0][0]          # (5, 8400) for example
+data = raw.T                 # (8400, 5)
 
-# Transpose if needed (check your model)
-data = raw.T  # shape: (N, 5)
-
-# ------------------------------
-# FILTER INVALID VALUES
-# ------------------------------
+# Filter invalid rows
 valid_mask = ~np.isinf(data).any(axis=1) & ~np.isnan(data).any(axis=1)
 data = data[valid_mask]
 
-print("Filtered predictions shape:", data.shape)
+print("Shape after filtering:", data.shape)
 print("NaN count:", np.isnan(data).sum())
 print("Inf count:", np.isinf(data).sum())
 print("Sample rows:\n", data[:10])
 
-# ------------------------------
-# PROCESS DETECTIONS
-# ------------------------------
-for i, (x, y, w, h, score) in enumerate(data):
-    if score < CONFIDENCE_THRESHOLD:
+# -----------------
+# Decode boxes
+# -----------------
+boxes = []
+scores = []
+
+for row in data:
+    x, y, w, h, conf = row
+    conf = sigmoid(conf)
+    if conf < 0.4:   # threshold
         continue
+    x1 = int(x - w/2)
+    y1 = int(y - h/2)
+    x2 = int(x + w/2)
+    y2 = int(y + h/2)
+    boxes.append([x1, y1, x2-x1, y2-y1])
+    scores.append(float(conf))
 
-    # convert center/size to top-left / bottom-right
-    x1 = int(x - w / 2)
-    y1 = int(y - h / 2)
-    x2 = int(x + w / 2)
-    y2 = int(y + h / 2)
+print("Candidates before NMS:", len(boxes))
 
-    # clip coordinates to image bounds
-    x1 = max(0, min(x1, IMAGE_WIDTH - 1))
-    y1 = max(0, min(y1, IMAGE_HEIGHT - 1))
-    x2 = max(0, min(x2, IMAGE_WIDTH - 1))
-    y2 = max(0, min(y2, IMAGE_HEIGHT - 1))
+# -----------------
+# Non-Max Suppression
+# -----------------
+indices = cv2.dnn.NMSBoxes(
+    boxes,
+    scores,
+    score_threshold=0.4,
+    nms_threshold=0.45
+)
 
-    # draw bounding box
-    cv2.rectangle(img_resized, (x1, y1), (x2, y2), (0, 255, 0), 2)
-    cv2.putText(img_resized, f"{score:.2f}", (x1, y1-5),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
+# Flatten indices if needed
+if len(indices) > 0:
+    indices = indices.flatten()
+else:
+    indices = []
 
-# ------------------------------
-# SAVE RESULT (headless)
-# ------------------------------
-cv2.imwrite(OUTPUT_PATH, img_resized)
-print(f"Detection results saved to {OUTPUT_PATH}")
+print("Final boxes after NMS:", len(indices))
 
+# -----------------
+# Draw results
+# -----------------
+for i in indices:
+    x, y, w, h = boxes[i]
+    cv2.rectangle(orig, (x, y), (x+w, y+h), (0, 255, 0), 2)
+    cv2.putText(
+        orig,
+        f"{scores[i]:.2f}",
+        (x, y-5),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.5,
+        (0, 255, 0),
+        2
+    )
+
+cv2.imwrite("detected.png", orig)
 rknn.release()
