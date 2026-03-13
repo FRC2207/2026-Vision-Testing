@@ -134,7 +134,7 @@ class YoloWrapper:
             class_scores = row[5:] if len(row) > 5 else [conf]
 
             conf = float(self._sigmoid(conf))
-            conf = float(np.max(class_scores)) * conf
+            # conf = float(np.max(class_scores)) * conf
 
             if conf < 0.25: # Defualt confidence thresohld to skip doing math on thousands of low confidence detections
                 continue
