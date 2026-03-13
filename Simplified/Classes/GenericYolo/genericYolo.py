@@ -116,12 +116,13 @@ class YoloWrapper:
     def _convert_rknn_outputs(self, frame_output, orig_shape):
         self.logger.info(f"Original frame_output shape: {frame_output.shape}")
 
+        # Squeeze batch dimension if present
         if frame_output.ndim == 3:
             frame_output = frame_output[0]
             self.logger.info(f"Squeezed frame_output shape: {frame_output.shape}")
 
-        # Remove transpose; only keep for debugging
-        if frame_output.shape[0] < frame_output.shape[1]:
+        # Transpose RKNN output to [num_boxes, 5] if needed
+        if frame_output.shape[0] == 5 and frame_output.shape[1] > 5:
             frame_output = frame_output.T
             self.logger.info(f"Transposed frame_output shape: {frame_output.shape}")
 
@@ -130,47 +131,57 @@ class YoloWrapper:
         frame_output = frame_output[valid_mask]
         self.logger.info(f"After filtering invalid rows, frame_output shape: {frame_output.shape}")
 
+        # Compute letterbox padding and scaling
         orig_h, orig_w = orig_shape[:2]
-        target_size = self.input_size
-        scale = min(target_size[0] / orig_w, target_size[1] / orig_h)
+        target_w, target_h = self.input_size
+        scale = min(target_w / orig_w, target_h / orig_h)
         new_w, new_h = int(orig_w * scale), int(orig_h * scale)
-        pad_x = (target_size[0] - new_w) / 2
-        pad_y = (target_size[1] - new_h) / 2
+        pad_x = (target_w - new_w) / 2
+        pad_y = (target_h - new_h) / 2
 
         boxes = []
+        scores = []
+
+        # Process each box
         for i, row in enumerate(frame_output):
             x_c, y_c, w, h, conf = row[:5]
+            if conf == 0:
+                continue
             conf = float(self._sigmoid(conf))
 
-            if conf < 0.25:
+            # Debug: log first few boxes
+            if i < 10:
+                self.logger.info(f"Box {i}: raw={row}, sigmoid(conf)={conf:.4f}")
+
+            if conf < 0.6:  # Use working script threshold
                 continue
 
-            # Map coordinates to original image
+            # Map coordinates back to original image
             x = (x_c - pad_x) / scale
             y = (y_c - pad_y) / scale
             w /= scale
             h /= scale
 
-            x1 = max(0, int(x - w/2))
-            y1 = max(0, int(y - h/2))
-            x2 = min(orig_w - 1, int(x + w/2))
-            y2 = min(orig_h - 1, int(y + h/2))
+            x1 = max(0, int(x - w / 2))
+            y1 = max(0, int(y - h / 2))
+            x2 = min(orig_w - 1, int(x + w / 2))
+            y2 = min(orig_h - 1, int(y + h / 2))
 
             if (x2 - x1) <= 0 or (y2 - y1) <= 0:
                 continue
 
             boxes.append(Box([x1, y1, x2, y2], conf))
+            scores.append(conf)
 
         self.logger.info(f"Number of boxes before NMS: {len(boxes)}")
-        
+
         if not boxes:
             self.logger.info("No boxes passed confidence threshold.")
             return Results([], orig_shape)
 
-        # Apply NMS
-        scores = [b.conf for b in boxes]
+        # Apply NMS using x,y,w,h format
         nms_boxes = [[b.xyxy[0], b.xyxy[1], b.xyxy[2]-b.xyxy[0], b.xyxy[3]-b.xyxy[1]] for b in boxes]
-        indices = cv2.dnn.NMSBoxes(nms_boxes, scores, score_threshold=0.25, nms_threshold=0.3)
+        indices = cv2.dnn.NMSBoxes(nms_boxes, scores, score_threshold=0.4, nms_threshold=0.45)
         indices = indices.flatten() if len(indices) > 0 else []
 
         self.logger.info(f"Indices after NMS: {indices}")
