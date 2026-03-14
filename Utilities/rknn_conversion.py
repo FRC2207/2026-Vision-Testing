@@ -11,7 +11,7 @@ rknn.config(
 )
 
 rknn.load_onnx(
-    model='YoloModels/v26/nano/NoNMS/color-3.1-v26.onnx',
+    model='YoloModels/v26/nano/NoNMS-opset11/color-3.1-v26.onnx',
     outputs=["output0"]
 )
 
