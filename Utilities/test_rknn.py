@@ -6,18 +6,40 @@ from rknnlite.api import RKNNLite
 def sigmoid(x):
     return 1 / (1 + np.exp(-x))
 
-def letterbox(img, target_size=(640, 640)):
-    h, w = img.shape[:2]
-    target_w, target_h = target_size
-    scale = min(target_w / w, target_h / h)
-    new_w, new_h = int(w * scale), int(h * scale)
-    resized = cv2.resize(img, (new_w, new_h))
-    pad_w = target_w - new_w
-    pad_h = target_h - new_h
-    top, bottom = pad_h // 2, pad_h - (pad_h // 2)
-    left, right = pad_w // 2, pad_w - (pad_w // 2)
-    padded = cv2.copyMakeBorder(resized, top, bottom, left, right, cv2.BORDER_CONSTANT, value=(114,114,114))
-    return padded, scale, left, top
+# YOLOv8 Nano anchors and strides (example, adjust to your model)
+ANCHORS = np.array([[10,13, 16,30, 33,23],
+                    [30,61, 62,45, 59,119],
+                    [116,90, 156,198, 373,326]]).reshape(3,3,2)
+STRIDES = np.array([8,16,32])  # corresponding to the 3 detection layers
+
+def decode_yolo(out, img_shape, conf_threshold=0.3):
+    """Decode YOLOv8 NoNMS raw output"""
+    boxes = []
+    orig_h, orig_w = img_shape
+    for i, layer in enumerate(out):
+        # layer shape: [batch, anchors*(5+num_classes), grid_h, grid_w]
+        b, c, h, w = layer.shape
+        num_anchors = ANCHORS[i].shape[0]
+        num_classes = c // num_anchors - 5
+        layer = layer.reshape(b, num_anchors, 5+num_classes, h, w)
+        layer = layer.transpose(0,1,3,4,2)  # batch, anchors, grid_h, grid_w, 5+classes
+
+        for anchor_idx in range(num_anchors):
+            for gy in range(h):
+                for gx in range(w):
+                    pred = layer[0, anchor_idx, gy, gx]  # 5+classes
+                    x, y, w_box, h_box, conf = pred[:5]
+                    conf = sigmoid(conf)
+                    if conf < conf_threshold:
+                        continue
+                    x = (sigmoid(x) + gx) * STRIDES[i]
+                    y = (sigmoid(y) + gy) * STRIDES[i]
+                    w_box = np.exp(w_box) * ANCHORS[i][anchor_idx,0]
+                    h_box = np.exp(h_box) * ANCHORS[i][anchor_idx,1]
+                    x1, y1 = int(x - w_box/2), int(y - h_box/2)
+                    x2, y2 = int(x + w_box/2), int(y + h_box/2)
+                    boxes.append([x1, y1, x2, y2, conf])
+    return boxes
 
 print("Loading RKNN model...")
 rknn = RKNNLite()
@@ -33,12 +55,9 @@ if ret != 0:
 
 print("Runtime initialized")
 
+# Feed raw image; RKNN handles preprocessing
 img = cv2.imread("Images/1.png")
-orig_h, orig_w = img.shape[:2]
-img_resized, scale, pad_x, pad_y = letterbox(img)
-img_input = img_resized.astype(np.uint8)
-img_input = img_input.transpose(2,0,1)
-img_input = np.expand_dims(img_input, 0)
+img_input = np.expand_dims(img, 0)  # batch dimension
 
 print("Input tensor info:", img_input.shape, img_input.dtype, "range:", img_input.min(), img_input.max())
 
@@ -48,52 +67,13 @@ outputs = rknn.inference(inputs=[img_input])
 end = time.time()
 print("Inference time: {:.2f} ms".format((end - start) * 1000))
 
-out = outputs[0]
-print("\nOutput tensor info:", out.shape, out.dtype)
-print("min/max:", out.min(), out.max(), "mean:", out.mean())
-
-flat = out.flatten()
-print("Output distribution - first 20:", flat[:20])
-print("percent zero:", np.mean(flat == 0) * 100, "%")
-print("percent negative:", np.mean(flat < 0) * 100, "%")
-print("percent positive:", np.mean(flat > 0) * 100, "%")
-
-data = out[0].T  # shape: [num_boxes, 5]
-conf = data[:,4]
-sig_conf = sigmoid(conf)
-
-print("\nConfidence stats BEFORE sigmoid:", conf.min(), conf.max(), conf.mean())
-print("Confidence stats AFTER sigmoid:", sig_conf.min(), sig_conf.max(), sig_conf.mean())
-
-print("\nFirst 10 detections:")
-for i, row in enumerate(data):
-    print(row)
-    if i >= 9:  # stop after 10 rows
-        break
-
-print("\nDecoding boxes (manual, no NMS)...")
-boxes = []
-for row in data:
-    x, y, w, h, c = row
-    c = float(sigmoid(c))  # use sigmoid confidence
-    if c < 0.3:  # threshold
-        continue
-
-    # scale back to original image
-    x = (x - pad_x) / scale
-    y = (y - pad_y) / scale
-    w /= scale
-    h /= scale
-
-    x1, y1 = int(x - w/2), int(y - h/2)
-    x2, y2 = int(x + w/2), int(y + h/2)
-
-    if x2 <= x1 or y2 <= y1:
-        continue
-
-    boxes.append([x1, y1, x2, y2, c])
+# If multiple detection layers
+if isinstance(outputs, list):
+    boxes = decode_yolo(outputs, img.shape[:2])
+else:
+    boxes = decode_yolo([outputs], img.shape[:2])
 
 print("Valid boxes:", len(boxes))
-print("\nFinished testing.")
+print("First 10 boxes:", boxes[:10])
 
 rknn.release()
