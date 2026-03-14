@@ -65,8 +65,10 @@ print("\nConfidence stats BEFORE sigmoid:", conf.min(), conf.max(), conf.mean())
 print("Confidence stats AFTER sigmoid:", sig_conf.min(), sig_conf.max(), sig_conf.mean())
 
 print("\nFirst 10 detections:")
-for i in range(10):
-    print(data[i])
+for i, row in enumerate(data):
+    print(row)
+    if i >= 9:  # stop after 10 rows
+        break
 
 print("\nDecoding boxes (manual, no NMS)...")
 boxes = []
