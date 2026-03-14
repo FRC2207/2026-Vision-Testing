@@ -44,12 +44,12 @@ rknn = RKNNLite()
 
 ret = rknn.load_rknn("YoloModels/v26/nano/NoNMS-End2End-Half/model_quant.rknn")
 if ret != 0:
-    print("❌ Failed to load RKNN model")
+    print("Failed to load RKNN model")
     exit()
 
 ret = rknn.init_runtime(core_mask=RKNNLite.NPU_CORE_0)
 if ret != 0:
-    print("❌ Failed to init runtime")
+    print("Failed to init runtime")
     exit()
 
 print("Runtime initialized")
