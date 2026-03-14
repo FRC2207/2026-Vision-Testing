@@ -21,7 +21,7 @@ def letterbox(img, target_size=(640, 640)):
 
 print("Loading RKNN model...")
 rknn = RKNNLite()
-ret = rknn.load_rknn("YoloModels\\v26\\nano\\NoNMS\\model.rknn")
+ret = rknn.load_rknn("YoloModels/v26/nano/NoNMS/model.rknn")
 if ret != 0:
     print("Failed to load RKNN model")
     exit()
