@@ -6,7 +6,7 @@ model.export(
     format='onnx',
     opset=12,
     simplify=True,
-    dynamic=False,
+    dynamic=False
 )
 
 # model.export(format='onnx', opset=12, imgsz=640, simplify=True, dynamic=True)

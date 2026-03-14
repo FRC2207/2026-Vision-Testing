@@ -39,6 +39,8 @@ class YoloWrapper:
         self.model_type = None
         self.logger = logging.getLogger(__name__)
 
+        self._output_fmt = None # Used for no-nms and nms models (Yolov11 - Yolov26)
+
         if model_file.endswith(".rknn"):
             if RKNN_FOUND is None:
                 self.logger.error(
@@ -63,7 +65,7 @@ class YoloWrapper:
             #     raise ValueError(f"Failed to build RKNN model: {self.model_file}")
 
             # Initialize the RKNN runtime on NPU 0
-            ret = self.model.init_runtime(core_mask=RKNNLite.NPU_CORE_0_1_2, output_dtype='float32')
+            ret = self.model.init_runtime(core_mask=RKNNLite.NPU_CORE_0_1_2)
             # core_mask=RKNNLite.NPU_CORE_0_1_2 use for all NPU usage
             if ret != 0:
                 self.logger.error(
@@ -97,17 +99,36 @@ class YoloWrapper:
                 # self.logger.info(f"Frame info: shape={frame.shape}, dtype={frame.dtype}")
                 raw_outputs = self.model.inference(inputs=[frame])
                 # self.logger.info("Ran inference.")
-                output_tensor = raw_outputs[0][0]
-                # self.logger.info(f"Output: {output_tensor}")
-                # self.logger.info(f"Raw output: {raw_outputs}")
+                output_tensor = raw_outputs[0] # keep batch dim for format detection
+
+                # Auto-detect output format on first inference
+                if self._output_fmt is None:
+                    _, d1, d2 = output_tensor.shape
+                    if d2 == 6:
+                        self._output_fmt = "end2end" # (1, 300, 6) - YOLO26 default
+                    else:
+                        self._output_fmt = "no_nms" # (1, 5, 8400) - YOLO11 / stripped
+                    self.logger.info(f"Detected RKNN output format: {self._output_fmt}, shape={output_tensor.shape}, dtype={output_tensor.dtype}")
+
+                if output_tensor.dtype == np.int8: # Dequantize if int8
+                    output_tensor = output_tensor.astype(np.float32) / 128.0
+
                 target_shape = orig_shape if orig_shape is not None else frame.shape
 
-                results_list.append(
-                    self._convert_rknn_outputs(
-                        output_tensor,
-                        target_shape
+                if self._output_fmt == "end2end":
+                    results_list.append(
+                        self._convert_rknn_end2end_outputs(
+                            output_tensor[0],
+                            target_shape
+                        )
                     )
-                )
+                else:
+                    results_list.append(
+                        self._convert_rknn_outputs(
+                            output_tensor[0],
+                            target_shape
+                        )
+                    )
         else:
             results = self.model(frames, verbose=False, imgsz=self.input_size[0])
             results_list = [self._convert_ultralytics_to_results(r) for r in results]
@@ -215,6 +236,37 @@ class YoloWrapper:
         right = pad_w - left
         padded = cv2.copyMakeBorder(resized, top, bottom, left, right, cv2.BORDER_CONSTANT, value=(114,114,114))
         return padded, scale, left, top
+    
+    def _convert_rknn_end2end_outputs(self, detections, orig_shape):
+        orig_h, orig_w = orig_shape[:2]
+        target_w, target_h = self.input_size
+        scale = min(target_w / orig_w, target_h / orig_h)
+        new_w, new_h = int(orig_w * scale), int(orig_h * scale)
+        pad_x = (target_w - new_w) / 2
+        pad_y = (target_h - new_h) / 2
+
+        boxes = []
+        for det in detections:
+            x1, y1, x2, y2, conf = det[0], det[1], det[2], det[3], det[4]
+            conf = float(conf)
+            if conf < 0.1:
+                continue
+
+            x1 = max(0, int((x1 - pad_x) / scale))
+            y1 = max(0, int((y1 - pad_y) / scale))
+            x2 = min(orig_w, int((x2 - pad_x) / scale))
+            y2 = min(orig_h, int((y2 - pad_y) / scale))
+
+            if (x2 - x1) <= 0 or (y2 - y1) <= 0:
+                continue
+
+            boxes.append(Box([x1, y1, x2, y2], conf))
+
+        if not boxes:
+            self.logger.info("No boxes passed confidence threshold.")
+            return Results([], orig_shape)
+
+        return Results(boxes, orig_shape)
 
     def release(self):
         if self.model_type == "rknn":
