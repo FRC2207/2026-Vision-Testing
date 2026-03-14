@@ -36,8 +36,9 @@ print("Runtime initialized")
 img = cv2.imread("Images/1.png")
 orig_h, orig_w = img.shape[:2]
 img_resized, scale, pad_x, pad_y = letterbox(img)
-img_input = np.expand_dims(img_resized, 0).astype(np.uint8)
-img_input = np.ascontiguousarray(img_input)
+img_input = img_resized.astype(np.uint8)
+img_input = img_input.transpose(2,0,1)
+img_input = np.expand_dims(img_input, 0)
 
 print("Input tensor info:", img_input.shape, img_input.dtype, "range:", img_input.min(), img_input.max())
 
