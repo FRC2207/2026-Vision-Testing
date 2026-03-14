@@ -155,15 +155,16 @@ class Camera:
         return padded, scale, left, top
 
     def _preprocess_for_rknn(self, frame):
-        if frame is not None:
-            img_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            img_resized, _, _, _ = self._letterbox(frame, (640, 640))
-        
-            img_input = np.expand_dims(img_resized, 0)
-            img_input = np.ascontiguousarray(img_input)
-            return img_input
-        else:
+        if frame is None:
             return None
+
+        img_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+        img_resized, _, left, top = self._letterbox(img_rgb, (640, 640))
+
+        img_input = np.expand_dims(img_resized, axis=0)  # shape (1, H, W, 3)
+        img_input = np.ascontiguousarray(img_input, dtype=np.float32)
+        return img_input
         
     def release(self):
         if not self.is_image and hasattr(self, "cap") and self.cap:

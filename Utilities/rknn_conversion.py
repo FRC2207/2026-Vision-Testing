@@ -16,8 +16,8 @@ rknn.load_onnx(
 )
 
 rknn.build(
-    do_quantization=False
-    # dataset='Images/RknnDataset/dataset.txt'
+    do_quantization=True,
+    dataset='Images/RknnDataset/dataset.txt'
 )
 
 rknn.export_rknn('model.rknn')
