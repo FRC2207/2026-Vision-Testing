@@ -1,10 +1,5 @@
-"""
-Debug script — prints raw output values so we can see what confidence
-scores actually look like before any threshold is applied.
-"""
 import cv2
 import numpy as np
-import time
 from rknnlite.api import RKNNLite
 
 INPUT_SIZE = (640, 640)
@@ -31,31 +26,34 @@ rknn.init_runtime(core_mask=RKNNLite.NPU_CORE_0_1_2)
 img_bgr = cv2.imread("Images/1.png")
 img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
 img_lb, scale, pad_x, pad_y = letterbox(img_rgb, INPUT_SIZE)
-img_input = np.expand_dims(img_lb, axis=0).astype(np.float16)
+
+img_input = np.expand_dims(img_lb, axis=0).astype(np.uint8)
 
 outputs = rknn.inference(inputs=[img_input])
-raw = outputs[0][0]  # (300, 6)
+raw = outputs[0] # (1, 5, 8400) int8
+print(f"Raw output shape: {raw.shape}  dtype: {raw.dtype}")
+print(f"Raw int8 min/max: {raw.min()}  {raw.max()}")
 
-print("=== Full output column stats ===")
-print(f"x1  : min={raw[:,0].min():.3f}  max={raw[:,0].max():.3f}")
-print(f"y1  : min={raw[:,1].min():.3f}  max={raw[:,1].max():.3f}")
-print(f"x2  : min={raw[:,2].min():.3f}  max={raw[:,2].max():.3f}")
-print(f"y2  : min={raw[:,3].min():.3f}  max={raw[:,3].max():.3f}")
-print(f"conf: min={raw[:,4].min():.4f}  max={raw[:,4].max():.4f}  mean={raw[:,4].mean():.4f}")
-print(f"cls : min={raw[:,5].min():.3f}  max={raw[:,5].max():.3f}")
+# Dequantize int8 → float32
+frame_out = raw[0].astype(np.float32) / 128.0 # (5, 8400)
 
-print("\n=== Top 10 rows sorted by conf (col 4) ===")
-sorted_rows = raw[np.argsort(raw[:, 4])[::-1]][:10]
+if frame_out.shape[0] == 5 and frame_out.shape[1] > 5:
+    frame_out = frame_out.T # (8400, 5)
+
+print(f"\nAfter dequant + transpose: {frame_out.shape}")
+print(f"\n=== Column stats (x_c, y_c, w, h, conf) ===")
+labels = ['x_c ', 'y_c ', 'w   ', 'h   ', 'conf']
+for i, label in enumerate(labels):
+    col = frame_out[:, i]
+    print(f"  {label}: min={col.min():.4f}  max={col.max():.4f}  mean={col.mean():.4f}")
+
+print("\n=== Top 10 rows by confidence ===")
+sorted_rows = frame_out[np.argsort(frame_out[:, 4])[::-1]][:10]
 for i, row in enumerate(sorted_rows):
-    print(f"  {i}: x1={row[0]:.1f} y1={row[1]:.1f} x2={row[2]:.1f} y2={row[3]:.1f} conf={row[4]:.4f} cls={row[5]:.0f}")
-
-print("\n=== Top 10 rows sorted by col 5 (in case conf/cls are swapped) ===")
-sorted_rows2 = raw[np.argsort(raw[:, 5])[::-1]][:10]
-for i, row in enumerate(sorted_rows2):
-    print(f"  {i}: x1={row[0]:.1f} y1={row[1]:.1f} x2={row[2]:.1f} y2={row[3]:.1f} col4={row[4]:.4f} col5={row[5]:.4f}")
+    print(f"  {i}: x_c={row[0]:.1f} y_c={row[1]:.1f} w={row[2]:.1f} h={row[3]:.1f} conf={row[4]:.4f}")
 
 print("\n=== First 5 raw rows (no sorting) ===")
-for i, row in enumerate(raw[:5]):
+for i, row in enumerate(frame_out[:5]):
     print(f"  {i}: {row}")
 
 rknn.release()
