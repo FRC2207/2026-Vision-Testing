@@ -63,7 +63,7 @@ class YoloWrapper:
             #     raise ValueError(f"Failed to build RKNN model: {self.model_file}")
 
             # Initialize the RKNN runtime on NPU 0
-            ret = self.model.init_runtime(core_mask=RKNNLite.NPU_CORE_0_1_2)
+            ret = self.model.init_runtime(core_mask=RKNNLite.NPU_CORE_0_1_2, output_dtype='float32')
             # core_mask=RKNNLite.NPU_CORE_0_1_2 use for all NPU usage
             if ret != 0:
                 self.logger.error(

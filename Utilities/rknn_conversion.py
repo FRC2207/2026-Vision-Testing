@@ -7,11 +7,13 @@ rknn.config(
     mean_values=[[0,0,0]],
     std_values=[[255,255,255]],
     # disable_rules=['fuse_exmatmul_add_mul_exsoftmax13_exmatmul_to_sdpa'],
-    quantized_dtype='w8a8'
+    quantized_algorithm='kl_divergence', # IDK what this does
+    quantized_dtype='w8a8',
+    quantized_hybrid_level=3
 )
 
 rknn.load_onnx(
-    model='YoloModels/v26/nano/NoNMS/color-3.1-v26.onnx',
+    model='YoloModels/v26/nano/Test/color-3.1-v26.onnx',
     outputs=["output0"]
 )
 

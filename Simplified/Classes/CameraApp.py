@@ -1,56 +1,80 @@
+from flask import Flask, Response, render_template_string
 import cv2
-from flask import Flask, Response
 import threading
-import numpy as np
-import time
+import logging
+
+PAGE = """
+<!DOCTYPE html>
+<html>
+<head><title>Camera Feed</title></head>
+<body style="margin:0;background:#111">
+<img id="feed" src="/video_feed" style="display:block"/>
+<script>
+  fetch('/dimensions')
+    .then(r => r.json())
+    .then(d => {
+      const img = document.getElementById('feed');
+      img.style.width  = d.width  + 'px';
+      img.style.height = d.height + 'px';
+    });
+</script>
+</body>
+</html>
+"""
 
 class CameraApp:
     def __init__(self):
-        self.app = Flask(__name__)
-        self.current_frame = np.zeros((480, 640, 3), dtype=np.uint8)
-        self.frame_lock = threading.Lock()
-        
-        self.app.add_url_rule('/video_feed', 'video_feed', self.video_feed)
-        self.app.add_url_rule('/', 'index', self.index)
-    
+        self.app    = Flask(__name__)
+        self.frame  = None
+        self.lock   = threading.Lock()
+        self.width  = 640 # Updates once first frame arrives
+        self.height = 480 # Updates once first frame arrives
+        self.logger = logging.getLogger(__name__)
+
+        self.app.add_url_rule('/',            'index',      self._index)
+        self.app.add_url_rule('/video_feed',  'video_feed', self._video_feed)
+        self.app.add_url_rule('/dimensions',  'dimensions', self._dimensions)
+
     def set_frame(self, frame):
-        with self.frame_lock:
-            self.current_frame = frame
-    
-    def generate_frames(self):
+        if frame is None:
+            return
+        with self.lock:
+            self.frame  = frame
+            self.height, self.width = frame.shape[:2]
+
+    def run(self, host='0.0.0.0', port=5000):
+        self.app.run(host=host, port=port, threaded=True)
+
+    def _index(self):
+        return render_template_string(PAGE)
+
+    def _dimensions(self):
+        from flask import jsonify
+        return jsonify(width=self.width, height=self.height)
+
+    def _video_feed(self):
+        return Response(
+            self._generate(),
+            mimetype='multipart/x-mixed-replace; boundary=frame'
+        )
+
+    def _generate(self):
+        import time
         while True:
-            start_time = time.time()
-            with self.frame_lock:
-                if self.current_frame is None:
-                    time.sleep(0.01)
-                    continue
-                frame = self.current_frame.copy()
+            with self.lock:
+                frame = self.frame
 
-            ret, buffer = cv2.imencode('.jpg', frame)
-            if not ret:
+            if frame is None:
+                time.sleep(0.05)
                 continue
-            frame_bytes = buffer.tobytes()
 
-            yield (b'--frame\r\n'
-                b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
+            ok, buf = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 80])
+            if not ok:
+                continue
 
-            # Limit to roughly 10 fps
-            elapsed = time.time() - start_time
-            time.sleep(max(0, 0.1 - elapsed))
-    
-    def video_feed(self):
-        return Response(self.generate_frames(),
-                        mimetype='multipart/x-mixed-replace; boundary=frame')
-    
-    def index(self):
-        return """
-        <!DOCTYPE html>
-        <html>
-        <body>
-            <img src="/video_feed" alt="Video Stream">
-        </body>
-        </html>
-        """
-    
-    def run(self, host='0.0.0.0', port=5000, debug=False, use_reloader=False):
-        self.app.run(host=host, port=port, debug=debug, use_reloader=use_reloader, threaded=True)
+            yield (
+                b'--frame\r\n'
+                b'Content-Type: image/jpeg\r\n\r\n'
+                + buf.tobytes()
+                + b'\r\n'
+            )

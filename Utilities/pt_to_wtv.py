@@ -1,13 +1,14 @@
 from ultralytics import YOLO
 
-model = YOLO("YoloModels/v26/nano/NoNMS-opset11/color-3.1-v26.pt", task="detect")
+model = YOLO("YoloModels/v26/nano/test/color-3.1-v26.pt", task="detect")
 
 model.export(
     format='onnx',
-    opset=11,
+    opset=12,
     simplify=True,
     dynamic=False,
-    nms=False
+    nms=False,
+    end2end=False
 )
 
 # model.export(format='onnx', opset=12, imgsz=640, simplify=True, dynamic=True)
