@@ -4,7 +4,7 @@ import time
 from rknnlite.api import RKNNLite
 
 CONF_THRESH = 0.3
-INPUT_SIZE   = (640, 640)
+INPUT_SIZE  = (640, 640)
 
 def letterbox(img, target_size=(640, 640)):
     h, w = img.shape[:2]
@@ -28,22 +28,23 @@ if ret != 0:
     print("Failed to load RKNN model")
     exit()
 
-ret = rknn.init_runtime(core_mask=RKNNLite.NPU_CORE_0_1_2, output_dtype='float32')
+ret = rknn.init_runtime(core_mask=RKNNLite.NPU_CORE_0_1_2)
 if ret != 0:
     print("Failed to init runtime")
     exit()
 print("Runtime initialized")
 
-img_bgr  = cv2.imread("Images/1.png")
+sdk_ver = rknn.get_sdk_version()
+print("SDK version:", sdk_ver)
+
+img_bgr = cv2.imread("Images/1.png")
 orig_h, orig_w = img_bgr.shape[:2]
-
-img_rgb  = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
+img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
 img_lb, scale, pad_x, pad_y = letterbox(img_rgb, INPUT_SIZE)
-
-img_input = np.expand_dims(img_lb, axis=0).astype(np.float16) # -> (1, 640, 640, 3), dtype=float16
+img_input = np.expand_dims(img_lb, axis=0).astype(np.float16)
 
 print("Input tensor:", img_input.shape, img_input.dtype,
-      "range:", img_input.min(), "-", img_input.max())
+      "range:", img_input.min(), "–", img_input.max())
 
 print("\nRunning inference...")
 start   = time.time()
@@ -51,22 +52,28 @@ outputs = rknn.inference(inputs=[img_input])
 end     = time.time()
 print(f"Inference time: {(end - start)*1000:.1f} ms")
 
-raw = outputs[0] # -> [1, 5, 8400]
+raw = outputs[0]
 print("\nRaw output shape:", raw.shape, "dtype:", raw.dtype)
-print("min/max:", raw.min(), raw.max(), "mean:", raw.mean())
+print("Raw min/max/mean:", raw.min(), raw.max(), raw.mean())
 
-frame_out = raw[0] # [5, 8400]
+if raw.dtype == np.int8:
+    print("Output is int8 — dequantizing with scale=1/128, zero_point=0")
+    frame_out = raw[0].astype(np.float32) / 128.0
+elif raw.dtype == np.float16:
+    frame_out = raw[0].astype(np.float32)
+else:
+    frame_out = raw[0]
+
+print("After dequant min/max/mean:", frame_out.min(), frame_out.max(), frame_out.mean())
 
 if frame_out.shape[0] == 5 and frame_out.shape[1] > 5:
-    frame_out = frame_out.T # -> [8400, 5]
+    frame_out = frame_out.T # [8400, 5]
 
 boxes  = []
 scores = []
 for row in frame_out:
     x_c, y_c, w, h, conf = row[:5]
-
     conf = float(conf)
-
     if conf < CONF_THRESH:
         continue
 
@@ -83,7 +90,7 @@ for row in frame_out:
     if (x2 - x1) <= 0 or (y2 - y1) <= 0:
         continue
 
-    boxes.append([x1, y1, x2 - x1, y2 - y1]) # x, y, w, h for NMS
+    boxes.append([x1, y1, x2 - x1, y2 - y1])
     scores.append(conf)
 
 print(f"\nBoxes before NMS: {len(boxes)}")
