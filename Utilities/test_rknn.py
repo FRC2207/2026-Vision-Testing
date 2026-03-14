@@ -44,7 +44,7 @@ print("min/max:", out.min(), out.max(), "mean:", out.mean())
 # Apply sigmoid on confidence
 boxes = []
 for row in out:
-    x, y, w, h, conf = row
+    x, y, w, h, conf, cls_id = row
     conf = sigmoid(conf)
     if conf < CONF_THRESH:
         continue
