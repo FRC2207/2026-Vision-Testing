@@ -169,8 +169,8 @@ class YoloWrapper:
         # Process each box
         for i, row in enumerate(frame_output):
             x_c, y_c, w, h, conf = row[:5]
-            if conf == 0:
-                continue
+            # if conf == 0:
+                # continue
             
             conf = float(self._sigmoid(conf))
             # if i < 10:
