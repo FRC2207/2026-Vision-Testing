@@ -164,7 +164,7 @@ class Camera:
         img_resized, _, left, top = self._letterbox(img_rgb, (640, 640))
 
         img_input = np.expand_dims(img_resized, axis=0) # (1, 640, 640, 3)
-        img_input = np.ascontiguousarray(img_resized, dtype=np.uint8)
+        img_input = np.ascontiguousarray(img_input, dtype=np.uint8)
         return img_input
         
     def release(self):
