@@ -77,7 +77,7 @@ if __name__ == "__main__":
                 raw_fuel_positions, annotated_frame = camera.run()
                 fuel_positions = numpy_to_fuel_list(raw_fuel_positions)
             except:
-                fuel_positions = []
+                fuel_positions, annotated_frame = [], None
 
             fuel_tracker.set_fuel_list(fuel_positions)
             fuel_tracker.sort()
