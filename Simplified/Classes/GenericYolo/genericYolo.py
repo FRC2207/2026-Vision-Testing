@@ -136,26 +136,31 @@ class YoloWrapper:
         return results_list if is_list else results_list[0]
 
     def _convert_rknn_outputs(self, frame_output, orig_shape):
-        # self.logger.info(f"Original frame_output shape: {frame_output.shape}")
-
         # Squeeze batch dimension if present
         if frame_output.ndim == 3:
             frame_output = frame_output[0]
-            # self.logger.info(f"Squeezed frame_output shape: {frame_output.shape}")
 
-        # Transpose RKNN output to [num_boxes, 5] if needed
+        # Transpose to [num_boxes, 5] if needed
         if frame_output.shape[0] == 5 and frame_output.shape[1] > 5:
             frame_output = frame_output.T
-            # self.logger.info(f"Transposed frame_output shape: {frame_output.shape}")
-        # self.logger.info(f"Raw output dtype={frame_output.dtype}, shape={frame_output.shape}")
-        # self.logger.info(f"Value range: min={frame_output.min():.4f}, max={frame_output.max():.4f}")
-        # self.logger.info(f"Top 5 conf values: {sorted(frame_output[:, 4], reverse=True)[:5]}")
+
         # Remove invalid rows
         valid_mask = ~np.isinf(frame_output).any(axis=1) & ~np.isnan(frame_output).any(axis=1)
         frame_output = frame_output[valid_mask]
-        # self.logger.info(f"After filtering invalid rows, frame_output shape: {frame_output.shape}")
 
-        # Compute letterbox padding and scaling
+        # Vectorized sigmoid on conf column — no Python loop
+        confs = 1 / (1 + np.exp(-frame_output[:, 4]))
+
+        # Filter by confidence threshold before doing anything else
+        conf_mask = confs >= 0.5  # raised from 0.1
+        frame_output = frame_output[conf_mask]
+        confs = confs[conf_mask]
+
+        if len(frame_output) == 0:
+            self.logger.info("No boxes passed confidence threshold.")
+            return Results([], orig_shape)
+
+        # Vectorized coordinate remapping
         orig_h, orig_w = orig_shape[:2]
         target_w, target_h = self.input_size
         scale = min(target_w / orig_w, target_h / orig_h)
@@ -163,56 +168,32 @@ class YoloWrapper:
         pad_x = (target_w - new_w) / 2
         pad_y = (target_h - new_h) / 2
 
-        boxes = []
-        scores = []
+        x_c = (frame_output[:, 0] - pad_x) / scale
+        y_c = (frame_output[:, 1] - pad_y) / scale
+        w   = frame_output[:, 2] / scale
+        h   = frame_output[:, 3] / scale
 
-        # Process each box
-        for i, row in enumerate(frame_output):
-            x_c, y_c, w, h, conf = row[:5]
-            # if conf == 0:
-                # continue
-            
-            conf = float(self._sigmoid(conf))
-            # if i < 10:
-                # self.logger.info(f"Box {i}: raw={row}, conf={conf:.4f}")
+        x1s = (x_c - w / 2).astype(int)
+        y1s = (y_c - h / 2).astype(int)
+        x2s = (x_c + w / 2).astype(int)
+        y2s = (y_c + h / 2).astype(int)
 
-            if conf < 0.1:  # working threshold
-                continue
+        # Filter zero-size boxes
+        size_mask = (x2s - x1s > 0) & (y2s - y1s > 0)
+        x1s, y1s, x2s, y2s, confs = x1s[size_mask], y1s[size_mask], x2s[size_mask], y2s[size_mask], confs[size_mask]
 
-            # Map coordinates back to original image
-            x = (x_c - pad_x) / scale
-            y = (y_c - pad_y) / scale
-            w /= scale
-            h /= scale
-
-            # Now calculate corners
-            x1 = int(x - w / 2)
-            y1 = int(y - h / 2)
-            x2 = int(x + w / 2)
-            y2 = int(y + h / 2)
-
-            if (x2 - x1) <= 0 or (y2 - y1) <= 0:
-                continue
-
-            boxes.append(Box([x1, y1, x2, y2], conf))
-            scores.append(conf)
-
-        # self.logger.info(f"Number of boxes before NMS: {len(boxes)}")
-
-        if not boxes:
-            self.logger.info("No boxes passed confidence threshold.")
+        if len(x1s) == 0:
             return Results([], orig_shape)
 
-        # Apply NMS using x,y,w,h format
+        boxes = [Box([x1, y1, x2, y2], float(c)) for x1, y1, x2, y2, c in zip(x1s, y1s, x2s, y2s, confs)]
+        scores = confs.tolist()
+
+        # Tighter NMS — 0.3 instead of 0.45 to kill the overlapping grid
         nms_boxes = [[b.xyxy[0], b.xyxy[1], b.xyxy[2]-b.xyxy[0], b.xyxy[3]-b.xyxy[1]] for b in boxes]
-        indices = cv2.dnn.NMSBoxes(nms_boxes, scores, score_threshold=0.1, nms_threshold=0.45)
+        indices = cv2.dnn.NMSBoxes(nms_boxes, scores, score_threshold=0.5, nms_threshold=0.3)
         indices = indices.flatten() if len(indices) > 0 else []
 
-        # self.logger.info(f"Indices after NMS: {indices}")
-        final_boxes = [boxes[i] for i in indices]
-        # self.logger.info(f"Number of final boxes: {len(final_boxes)}")
-
-        return Results(final_boxes, orig_shape)
+        return Results([boxes[i] for i in indices], orig_shape)
 
     def _convert_ultralytics_to_results(self, ultralytics_result):
         boxes = [Box(list(b.xyxy[0]), float(b.conf[0])) for b in ultralytics_result.boxes]
