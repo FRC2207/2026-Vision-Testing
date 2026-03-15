@@ -147,7 +147,9 @@ class YoloWrapper:
         if frame_output.shape[0] == 5 and frame_output.shape[1] > 5:
             frame_output = frame_output.T
             # self.logger.info(f"Transposed frame_output shape: {frame_output.shape}")
-
+        self.logger.info(f"Raw output dtype={frame_output.dtype}, shape={frame_output.shape}")
+        self.logger.info(f"Value range: min={frame_output.min():.4f}, max={frame_output.max():.4f}")
+        self.logger.info(f"Top 5 conf values: {sorted(frame_output[:, 4], reverse=True)[:5]}")
         # Remove invalid rows
         valid_mask = ~np.isinf(frame_output).any(axis=1) & ~np.isnan(frame_output).any(axis=1)
         frame_output = frame_output[valid_mask]
