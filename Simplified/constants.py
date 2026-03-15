@@ -28,6 +28,8 @@ MAX_Y = 690.88
 ELIPSON = 20
 MIN_SAMPLES = 1
 
+YOLO_INPUT_SIZE = 320
+
 #######################################################################
 # Camera stuff
 #######################################################################
@@ -35,7 +37,7 @@ CAMERA_FOV = 74.9
 KNOWN_CALIBRATION_DISTANCE = 12
 BALL_D_INCHES = 5.90551
 KNOWN_CALIBRATION_PIXEL_HEIGHT = 334 # This is guestimated from averaging data and hand tweaking it. Averaging ended at 292.5555555555556
-YOLO_MODEL_FILE = "YoloModels/v8_or_v11/3.1/model.rknn"
+YOLO_MODEL_FILE = "YoloModels/v8_or_v11/3.1-320x320/model.rknn"
 GRAYSCALE = False
 NETWORKTABLES_IP = "10.22.7.2" # Pretty sure this is right
 

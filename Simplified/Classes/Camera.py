@@ -39,6 +39,7 @@ class Camera:
         min_confidence: float = 0.5,
         debug_mode: bool = False,
         subsystem: str = "field",
+        input_size: tuple[int, int]=(640, 640)
     ):
         self.source = source
         self.camera_fov = camera_fov
@@ -50,6 +51,7 @@ class Camera:
         self.min_confidence = min_confidence
         self.grayscale = grayscale
         self.yolo_model_file = yolo_model_file
+        self.input_size = input_size
 
         # Camera transform stuff
         self.camera_pitch_angle = camera_downward_angle
@@ -90,7 +92,7 @@ class Camera:
             self.known_calibration_pixel_height * self.known_calibration_distance
         ) / self.ball_d_inches
 
-        self.model = YoloWrapper(self.yolo_model_file)
+        self.model = YoloWrapper(self.yolo_model_file, self.input_size)
         self.frame_lock = threading.Lock()
         if not self.is_image:
             self.frame_lock = threading.Lock()
@@ -161,7 +163,7 @@ class Camera:
 
         img_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
-        img_resized, _, left, top = self._letterbox(img_rgb, (640, 640))
+        img_resized, _, left, top = self._letterbox(img_rgb, self.input_size)
 
         img_input = np.expand_dims(img_resized, axis=0) # (1, 640, 640, 3)
         img_input = np.ascontiguousarray(img_input, dtype=np.uint8)
