@@ -268,7 +268,7 @@ class Camera:
         # self.logger.info(f"Got data: {data}, and frame: {frame}")
         if data is None or frame is None:
             self.logger.info("Frame or data is None")
-            return np.empty((0, 2))
+            return np.empty((0, 2)), None
 
         img_h, img_w = frame.shape[:2]
         # self.logger.info(f"img_h: {img_h}, img_w: {img_w}")
