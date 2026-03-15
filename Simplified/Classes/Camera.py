@@ -74,6 +74,7 @@ class Camera:
                 raise ValueError(f"Failed to read image {source}")
         else:
             # Assume it's a video file or webcam index
+            self.is_image = False
             self.cap = cv2.VideoCapture(source)
             # self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
 
@@ -381,5 +382,6 @@ class Camera:
 
     def destroy(self):
         self.stopped = True
-        self.cap.release()
+        if not self.is_image:
+            self.cap.release()
         cv2.destroyAllWindows()

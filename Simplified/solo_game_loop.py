@@ -56,12 +56,12 @@ if __name__ == "__main__":
         # Create planner
         try:
             raw_fuel_positions, annotated_frame = camera.run()
-            fuel_positions = fuel_list_to_numpy(raw_fuel_positions)
+            fuel_positions = numpy_to_fuel_list(raw_fuel_positions)
         except:
             fuel_positions = []
 
         planner = PathPlanner(
-            fuel_positions, constants.STARTING_POSITION,
+            fuel_list_to_numpy(fuel_positions), constants.STARTING_POSITION,
             constants.ELIPSON, constants.MIN_SAMPLES,
             debug_mode=constants.DEBUG_MODE,
         )
@@ -74,7 +74,7 @@ if __name__ == "__main__":
             # logger.info("Running: camera.run()")
             try:
                 raw_fuel_positions, annotated_frame = camera.run()
-                fuel_positions = fuel_list_to_numpy(raw_fuel_positions)
+                fuel_positions = numpy_to_fuel_list(raw_fuel_positions)
             except:
                 fuel_positions = []
 
