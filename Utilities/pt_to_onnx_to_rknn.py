@@ -3,7 +3,8 @@ from ultralytics import YOLO
 import os
 from rknn.api import RKNN
 
-pt_dir = os.path.dirname("YoloModels/v26/nano/testing/color-3.1-v26.pt")
+pt_path = "YoloModels/v26/nano/testing/color-3.1-v26.pt"
+pt_dir  = os.path.dirname(os.path.abspath(pt_path))
 model = YOLO("YoloModels/v26/nano/testing/color-3.1-v26.pt")
 model.export(format="rknn", name="rk3588", imgsz=(640, 640))
 
