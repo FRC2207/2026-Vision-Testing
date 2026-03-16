@@ -187,8 +187,12 @@ class Camera:
             return None, frame
         
         # self.logger.info("Calling self.model.predict(frame_preprocessed)")
-        results = self.model.predict(frame_preprocessed, orig_shape=frame.shape)
-        
+        # RKNN needs a preprocessed (4D) frame, ultralytics needs a raw (3D) frame
+        if self.model.model_type == "rknn":
+            results = self.model.predict(frame_preprocessed, orig_shape=frame.shape)
+        else:
+            results = self.model.predict(frame, orig_shape=frame.shape)   
+
         annotated_frame = frame.copy()
 
         # Show it with cv2
