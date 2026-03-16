@@ -76,8 +76,9 @@ if __name__ == "__main__":
             try:
                 raw_fuel_positions, annotated_frame = camera.run()
                 fuel_positions = numpy_to_fuel_list(raw_fuel_positions)
-            except:
+            except Exception as e:
                 fuel_positions, annotated_frame = [], None
+                logger.exception(f"Exception: {e}")
 
             fuel_tracker.set_fuel_list(fuel_positions)
             fuel_tracker.sort()
