@@ -249,23 +249,8 @@ class Camera:
         map_points = []
 
         for box in data.boxes:
-            x1, y1, x2, y2 = box.xyxy
-            w_pixels = x2 - x1
-            h_pixels = y2 - y1
-            conf = box.conf
-
             if not self._filter_box(box, img_w, img_h):
                 continue
-
-            cx = (x1 + x2) / 2.0
-            cy = (y1 + y2) / 2.0
-
-
-            avg_pixels = (w_pixels + h_pixels) / 2.0
-            if avg_pixels <= 0:
-                continue
-
-            distance_los = (self.ball_d_inches * self.focal_length_pixels) / avg_pixels
 
             # Transform from pixel coordinates to robot-relative coordinates
             pt = self._box_to_robot_point(box, img_w, img_h)
@@ -288,27 +273,9 @@ class Camera:
         # self.logger.info(f"Boxes: {data.boxes}")
 
         for box in data.boxes:
-            # self.logger.info("Iterating through each box.")
-            x1, y1, x2, y2 = box.xyxy
-            w_pixels = x2 - x1
-            h_pixels = y2 - y1
-            conf = box.conf
-
-            # self.logger.info(f"Box: ({x1:.1f}, {y1:.1f}) to ({x2:.1f}, {y2:.1f}), Conf: {conf:.3f}")
-
             # Filter boxes for things like confidence, apsect, etc.
             if not self._filter_box(box, img_w, img_h):
                 continue
-
-            cx = (x1 + x2) / 2.0
-            cy = (y1 + y2) / 2.0
-
-            avg_pixels = (w_pixels + h_pixels) / 2.0
-            if avg_pixels <= 0:
-                self.logger.info("Skipping detection due to illegal shape")
-                continue
-
-            distance_los = (self.ball_d_inches * self.focal_length_pixels) / avg_pixels
 
             # Transform from pixel coordinates to robot-relative coordinates
             pt = self._box_to_robot_point(box, img_w, img_h)
