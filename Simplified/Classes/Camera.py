@@ -40,7 +40,8 @@ class Camera:
         debug_mode: bool = False,
         subsystem: str = "field",
         input_size: tuple[int, int]=(640, 640),
-        quantized: bool=True
+        quantized: bool=True,
+        unit: str="inch"
     ):
         self.source = source
         self.camera_fov = camera_fov
@@ -55,6 +56,7 @@ class Camera:
         self.input_size = input_size
 
         self.quantized = quantized
+        self.unit = unit
 
         # Camera transform stuff
         self.camera_pitch_angle = camera_downward_angle
@@ -69,6 +71,13 @@ class Camera:
         self.gui_available = False
         self.logger = logging.getLogger(__name__)
         self.logger.info(f"Camera object created with: {self.__dict__}")
+
+        self.conversions = {
+            "meter": 0.0254,
+            "inch":  1.0,
+            "foot":  1/12,
+            "cm":    2.54,
+        }
 
         self.last_time = time.perf_counter()
 
@@ -338,10 +347,15 @@ class Camera:
         x_rotated = forward_distance * sin_yaw + left_right_distance * cos_yaw
         y_rotated = forward_distance * cos_yaw - left_right_distance * sin_yaw
 
-        x_meters = (x_rotated + self.camera_x) * 0.0254
-        y_meters = (y_rotated + self.camera_y) * 0.0254
+        scale = self.conversions.get(self.unit, 0.0254)
+        if scale is None:
+            self.logger.warning(f"Unknown unit: {self.unit}. Expected: {list(self.conversions.keys())}")
+            self.unit = "inch"
 
-        return np.array([x_meters, y_meters], dtype=np.float32)
+        x_out = (x_rotated + self.camera_x) * scale
+        y_out = (y_rotated + self.camera_y) * scale
+
+        return np.array([x_out, y_out], dtype=np.float32)
 
     def destroy(self):
         self.stopped = True

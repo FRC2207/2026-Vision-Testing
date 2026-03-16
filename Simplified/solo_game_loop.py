@@ -13,21 +13,24 @@ from Classes.FuelTracker import FuelTracker
 
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    filemode="w", # Overwrite, don't append
-    filename="log.txt"
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    filemode="w",  # Overwrite, don't append
+    filename="log.txt",
 )
 
 logger = logging.getLogger(__name__)
 
 # Camera class
 camera = Camera(
-    # "/dev/video0",
-    "Images/1.png",
-    constants.CAMERA_FOV, constants.KNOWN_CALIBRATION_DISTANCE,
-        constants.BALL_D_INCHES, constants.KNOWN_CALIBRATION_PIXEL_HEIGHT,
+    "/dev/video0",
+    # "Images/1.png",
+    constants.CAMERA_FOV,
+    constants.KNOWN_CALIBRATION_DISTANCE,
+    constants.BALL_D_INCHES,
+    constants.KNOWN_CALIBRATION_PIXEL_HEIGHT,
     constants.YOLO_MODEL_FILE,
-    constants.CAMERA_DOWNWARD_PITCH_ANGLE, constants.CAMERA_BOT_RELATIVE_YAW,
+    constants.CAMERA_DOWNWARD_PITCH_ANGLE,
+    constants.CAMERA_BOT_RELATIVE_YAW,
     constants.CAMERA_HEIGHT,
     constants.CAMERA_X_OFFSET,
     constants.CAMERA_Y_OFFSET,
@@ -35,7 +38,8 @@ camera = Camera(
     debug_mode=constants.DEBUG_MODE,
     subsystem="field",
     input_size=(constants.YOLO_INPUT_SIZE, constants.YOLO_INPUT_SIZE),
-    quantized=False
+    quantized=False,
+    unit=constants.UNIT
 )
 
 if constants.APP_MODE:
@@ -48,8 +52,10 @@ if constants.USE_NETWORK_TABLES:
 def numpy_to_fuel_list(fuel_positions):
     return [Fuel(p[0], p[1]) for p in fuel_positions]
 
+
 def fuel_list_to_numpy(fuel_list: list[Fuel]):
     return np.array([fuel.get_position() for fuel in fuel_list])
+
 
 if __name__ == "__main__":
     try:
@@ -63,9 +69,11 @@ if __name__ == "__main__":
             fuel_positions = []
 
         planner = PathPlanner(
-            fuel_list_to_numpy(fuel_positions), constants.STARTING_POSITION,
-            constants.ELIPSON, constants.MIN_SAMPLES,
-            debug_mode=constants.DEBUG_MODE,
+            fuel_list_to_numpy(fuel_positions),
+            constants.STARTING_POSITION,
+            constants.ELIPSON,
+            constants.MIN_SAMPLES,
+            debug_mode=constants.DEBUG_MODE
         )
         fuel_tracker = FuelTracker(fuel_positions, constants.DISTANCE_THRESHOLD)
 
@@ -101,12 +109,16 @@ if __name__ == "__main__":
                 # logger.info(f"Detected fuels: {len(fuel_positions)}")
                 pass
 
-            _, fuel_positions = planner.update_fuel_positions(fuel_list_to_numpy(fuel_positions))
+            _, fuel_positions = planner.update_fuel_positions(
+                fuel_list_to_numpy(fuel_positions)
+            )
             if constants.USE_NETWORK_TABLES:
-                network_handler.send_data(fuel_positions, "field_positions", "yolo_data")
+                network_handler.send_data(
+                    fuel_positions, "field_positions", "yolo_data"
+                )
 
             end_time = time.perf_counter()
-            est_fps = 1/(end_time - start_time)
+            est_fps = 1 / (end_time - start_time)
             logger.info(f"Loop run time: {end_time - start_time}. Est FPS: {est_fps}")
             # logger.info(f"Detected Fuel Positions: {[fuel_position for fuel_position in fuel_positions]}")
             # i += 1
