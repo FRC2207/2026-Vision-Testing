@@ -196,7 +196,7 @@ class YoloWrapper:
         return Results([boxes[i] for i in indices], orig_shape)
 
     def _convert_ultralytics_to_results(self, ultralytics_result):
-        boxes = [Box(list(b.xyxy[0]), float(b.conf[0])) for b in ultralytics_result.boxes]
+        boxes = [Box(b.xyxy[0].tolist(), float(b.conf)) for b in ultralytics_result.boxes]
         return Results(boxes, ultralytics_result.orig_shape)
 
     def _sigmoid(self, x):
