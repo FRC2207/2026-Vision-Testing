@@ -28,7 +28,7 @@ MAX_Y = 690.88
 ELIPSON = 20
 MIN_SAMPLES = 1
 
-YOLO_INPUT_SIZE = 640
+YOLO_INPUT_SIZE = 320
 
 #######################################################################
 # Camera stuff
