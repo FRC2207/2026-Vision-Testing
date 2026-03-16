@@ -1,63 +1,20 @@
-# This whole file is commented out but in "theory" it works
-
-# TODO: look into this for WAY higher fps: profile_results = rknn.profiling(inputs=[image])
-
-import os
-import torch
-import numpy as np
-from rknn.api import RKNN
+# pt_to_wtv.py — one script, does everything
 from ultralytics import YOLO
+import constants
+import os
+from rknn.api import RKNN
 
-# Enter all ur values
-PT_MODEL = "YoloModels/v26/nano/color-3.1-v26.pt"
-DATASET_PATH = "Images/RknnDataset"
+model = YOLO("YoloModels/v26/nano/testing/color-3.1-v26.pt")
+model.export(format="rknn", name="rk3588", imgsz=(640, 640))
 
-IMG_SIZE = 640 # Has to match what was used training the yolo model
-MEAN_VALUES = [[0, 0, 0]] # i have no clue what this is
-STD_VALUES = [[1, 1, 1]] # i have no cleu what this is
+pt_basename = os.path.splitext(os.path.basename("YoloModels/v26/nano/testing/color-3.1-v26.pt"))[0]
+onnx_path = f"{pt_basename}_rknn_model/{pt_basename}.onnx"
 
-print("[1/2] Exporting .pt → .onnx")
-
-model = YOLO(PT_MODEL)
-model.export(
-    format="onnx",
-    imgsz=IMG_SIZE,
-    opset=12, # most widely compatible opset
-    simplify=True,
-    dynamic=False
-)
-
-if not os.path.exists(PT_MODEL.replace(".pt", ".onnx")):
-    raise RuntimeError("onnx export failed, file not found")
-
-print("\n[2/2] Converting onnx to rknn")
-
-rknn = RKNN(verbose=True)
-
-rknn.config(
-    mean_values=MEAN_VALUES,
-    std_values=STD_VALUES,
-    optimization_level=3,
-    quantized_dtype = "w8a8", # idk but docs said best one for fps
-    target_platform="rk3588" # works for our pi
-)
-
-ret = rknn.load_onnx(model=PT_MODEL.replace(".pt", ".onnx"))
-if ret != 0:
-    raise RuntimeError("Failed to load onnx model")
-
-ret = rknn.build(
-    do_quantization=True,
-    dataset=DATASET_PATH
-)
-if ret != 0:
-    raise RuntimeError("rknn build failed")
-
-print("\n[3/] Exporting .rknn")
-
-ret = rknn.export_rknn(PT_MODEL.replace(".pt", ".rknn"))
-if ret != 0:
-    raise RuntimeError("Failed to export rknn")
-
+rknn = RKNN()
+rknn.config(target_platform='rk3588', mean_values=[[0,0,0]], std_values=[[255,255,255]])
+rknn.load_onnx(model=onnx_path)
+rknn.build(do_quantization=True, dataset="Images/RknnDataset/dataset.txt")
+rknn.export_rknn("YoloModels/v26/nano/testing/color-3.1-v26.pt")
 rknn.release()
-print("rknn model created (hopefully)")
+
+print(f"Done: {'YoloModels/v26/nano/testing/color-3.1-v26.pt'}")

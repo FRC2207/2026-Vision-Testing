@@ -12,3 +12,5 @@ rknn_env/
 rknn-toolkit2/
 profile.prof
 YoloModels/v26_rknn_testing/
+ultralytics_env/
+=2.4.0
