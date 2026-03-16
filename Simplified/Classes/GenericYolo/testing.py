@@ -42,7 +42,6 @@ class YoloWrapper:
         self._output_fmt   = None  # Auto-detected: "end2end" or "no_nms"
         self._needs_sigmoid = None  # Auto-detected: True if conf column needs sigmoid, False if already 0-1
 
-
         self.quantized = quantized
         self.logger.info(
             f"YoloWrapper init: model={model_file}, input_size={input_size}, quantized={quantized}"
@@ -194,7 +193,9 @@ class YoloWrapper:
         if len(frame_output) == 0:
             return Results([], orig_shape)
 
-        # Sigmoid on objectness column
+        # Auto-detect whether sigmoid is needed on first call.
+        # Models exported via ONNX->RKNN (e.g. YOLOv26) output pre-activated scores in [0,1].
+        # Models like stripped YOLOv11 RKNN output raw logits that need sigmoid.
         if self._needs_sigmoid is None:
             sample = frame_output[:, 4]
             self._needs_sigmoid = bool(sample.min() < -0.1 or sample.max() > 1.1)
@@ -263,9 +264,6 @@ class YoloWrapper:
         boxes = [Box(b.xyxy[0].tolist(), float(b.conf)) for b in ultralytics_result.boxes]
         return Results(boxes, ultralytics_result.orig_shape)
 
-    def _sigmoid(self, x):
-        return 1 / (1 + np.exp(-x))
-    
     def _convert_rknn_end2end_outputs(self, detections: np.ndarray, orig_shape) -> Results:
         orig_h, orig_w = orig_shape[:2]
         target_w, target_h = self.input_size
