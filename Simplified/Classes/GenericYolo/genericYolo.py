@@ -130,8 +130,9 @@ class YoloWrapper:
                         )
                     )
         else:
-            results = self.model(frames, verbose=False, imgsz=self.input_size[0])
-            results_list = [self._convert_ultralytics_to_results(r) for r in results]
+            for frame in frames:
+                result = self.model(frame, verbose=False, imgsz=self.input_size[0])
+                results_list.append(self._convert_ultralytics_to_results(result[0]))
 
         return results_list if is_list else results_list[0]
 
