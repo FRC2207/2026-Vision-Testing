@@ -39,8 +39,8 @@ class YoloWrapper:
         self.model_type = None
         self.logger = logging.getLogger(__name__)
 
-        self._output_fmt   = None  # Auto-detected: "end2end" or "no_nms"
-        self._needs_sigmoid = None  # Auto-detected: True if conf column needs sigmoid, False if already 0-1
+        self._output_fmt    = None  # Auto-detected: "end2end" or "no_nms"
+        self._needs_sigmoid = None  # Auto-detected: True = raw logits, False = pre-activated
 
         self.quantized = quantized
         self.logger.info(
@@ -183,24 +183,14 @@ class YoloWrapper:
         if frame_output.shape[0] == 5 and frame_output.shape[1] > 5:
             frame_output = frame_output.T
 
-        # Drop inf/nan rows
-        valid_mask = (
-            ~np.isinf(frame_output).any(axis=1)
-            & ~np.isnan(frame_output).any(axis=1)
-        )
-        frame_output = frame_output[valid_mask]
-
-        if len(frame_output) == 0:
-            return Results([], orig_shape)
-
-        # Auto-detect whether sigmoid is needed on first call.
-        # Models exported via ONNX->RKNN (e.g. YOLOv26) output pre-activated scores in [0,1].
-        # Models like stripped YOLOv11 RKNN output raw logits that need sigmoid.
+        # Confidence first — valid_mask must NOT run before this.
+        # High-conf rows can have out-of-bounds coords that appear as inf/nan,
+        # so filtering inf/nan before conf would silently drop real detections.
         if self._needs_sigmoid is None:
             sample = frame_output[:, 4]
             self._needs_sigmoid = bool(sample.min() < -0.1 or sample.max() > 1.1)
             self.logger.info(
-                f"Confidence activation: {'sigmoid (raw logits detected)' if self._needs_sigmoid else 'direct (pre-activated 0-1 detected)'}"
+                f"Confidence activation: {'sigmoid (raw logits)' if self._needs_sigmoid else 'direct (pre-activated 0-1)'}"
             )
 
         if self._needs_sigmoid:
@@ -208,12 +198,23 @@ class YoloWrapper:
         else:
             confs = frame_output[:, 4].copy()
 
-        conf_mask = confs >= 0.5
+        conf_mask    = confs >= 0.5
         frame_output = frame_output[conf_mask]
         confs        = confs[conf_mask]
 
         if len(frame_output) == 0:
             self.logger.info("No boxes passed confidence threshold.")
+            return Results([], orig_shape)
+
+        # Now drop inf/nan from the much smaller filtered set
+        valid_mask = (
+            ~np.isinf(frame_output).any(axis=1)
+            & ~np.isnan(frame_output).any(axis=1)
+        )
+        frame_output = frame_output[valid_mask]
+        confs        = confs[valid_mask]
+
+        if len(frame_output) == 0:
             return Results([], orig_shape)
 
         # Remap from letterboxed space back to original image space
@@ -230,10 +231,10 @@ class YoloWrapper:
         w   = frame_output[:, 2] / scale
         h   = frame_output[:, 3] / scale
 
-        x1s = np.clip((x_c - w / 2).astype(int), 0, orig_w)
-        y1s = np.clip((y_c - h / 2).astype(int), 0, orig_h)
-        x2s = np.clip((x_c + w / 2).astype(int), 0, orig_w)
-        y2s = np.clip((y_c + h / 2).astype(int), 0, orig_h)
+        x1s = (x_c - w / 2).astype(int)
+        y1s = (y_c - h / 2).astype(int)
+        x2s = (x_c + w / 2).astype(int)
+        y2s = (y_c + h / 2).astype(int)
 
         size_mask = (x2s - x1s > 0) & (y2s - y1s > 0)
         x1s, y1s, x2s, y2s, confs = (

@@ -184,16 +184,6 @@ class YoloWrapper:
         if frame_output.shape[0] == 5 and frame_output.shape[1] > 5:
             frame_output = frame_output.T
 
-        # Drop inf/nan rows
-        valid_mask = (
-            ~np.isinf(frame_output).any(axis=1)
-            & ~np.isnan(frame_output).any(axis=1)
-        )
-        frame_output = frame_output[valid_mask]
-
-        if len(frame_output) == 0:
-            return Results([], orig_shape)
-
         # Sigmoid on objectness column
         if self._needs_sigmoid is None:
             sample = frame_output[:, 4]
@@ -213,6 +203,16 @@ class YoloWrapper:
 
         if len(frame_output) == 0:
             self.logger.info("No boxes passed confidence threshold.")
+            return Results([], orig_shape)
+        
+        valid_mask = (
+            ~np.isinf(frame_output).any(axis=1)
+            & ~np.isnan(frame_output).any(axis=1)
+        )
+        frame_output = frame_output[valid_mask]
+        confs        = confs[valid_mask]
+
+        if len(frame_output) == 0:
             return Results([], orig_shape)
 
         # Remap from letterboxed space back to original image space
