@@ -34,7 +34,8 @@ camera = Camera(
     grayscale=constants.GRAYSCALE,
     debug_mode=constants.DEBUG_MODE,
     subsystem="field",
-    input_size=(constants.YOLO_INPUT_SIZE, constants.YOLO_INPUT_SIZE)
+    input_size=(constants.YOLO_INPUT_SIZE, constants.YOLO_INPUT_SIZE),
+    quantized=False
 )
 
 if constants.APP_MODE:

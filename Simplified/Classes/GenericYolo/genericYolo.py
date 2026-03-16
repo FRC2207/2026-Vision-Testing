@@ -33,7 +33,7 @@ class Results:
         return s
     
 class YoloWrapper:
-    def __init__(self, model_file: str, input_size=(640, 640)):
+    def __init__(self, model_file: str, input_size=(640, 640), quantized: bool=False):
         self.model_file = model_file
         self.input_size = input_size
         self.model_type = None
@@ -41,6 +41,11 @@ class YoloWrapper:
 
         self._output_fmt = None # Used for no-nms and nms models (Yolov11 - Yolov26)
 
+        self.quantized = quantized
+        self.logger.info(
+            f"YoloWrapper init: model={model_file}, input_size={input_size}, quantized={quantized}"
+        )
+        
         if model_file.endswith(".rknn"):
             if RKNN_FOUND is None:
                 self.logger.error(
@@ -86,88 +91,125 @@ class YoloWrapper:
                 f"Unsupported model file type: {self.model_file}. Check constants and spelling blud."
             )
 
-    def predict(self, frame_or_frames, orig_shape=None) -> list[Results]:
+    def _preprocess_for_rknn(self, frame: np.ndarray) -> np.ndarray:
+        img_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        img_letterboxed, _, _, _ = self._letterbox(img_rgb, self.input_size)
+        img_input = np.expand_dims(img_letterboxed, axis=0)  # (1, H, W, 3)
+        return np.ascontiguousarray(img_input, dtype=np.uint8)
+
+    def _letterbox(self, img: np.ndarray, target_size: tuple) -> tuple:
+        h, w = img.shape[:2]
+        target_w, target_h = target_size
+        scale = min(target_w / w, target_h / h)
+        new_w, new_h = int(w * scale), int(h * scale)
+        resized = cv2.resize(img, (new_w, new_h))
+
+        pad_w  = target_w - new_w
+        pad_h  = target_h - new_h
+        top    = pad_h // 2
+        bottom = pad_h - top
+        left   = pad_w // 2
+        right  = pad_w - left
+        padded = cv2.copyMakeBorder(
+            resized, top, bottom, left, right,
+            cv2.BORDER_CONSTANT, value=(114, 114, 114)
+        )
+        return padded, scale, left, top
+
+    def predict(self, frame_or_frames, orig_shape=None) -> "Results | list[Results]":
         is_list = isinstance(frame_or_frames, list)
         frames = frame_or_frames if is_list else [frame_or_frames]
-        # self.logger.info(f"Running with is_list: {is_list}")
 
         results_list = []
 
         if self.model_type == "rknn":
             for frame in frames:
-                # Inference
-                # self.logger.info(f"Frame info: shape={frame.shape}, dtype={frame.dtype}")
-                raw_outputs = self.model.inference(inputs=[frame])
-                # self.logger.info("Ran inference.")
+                target_shape = orig_shape if orig_shape is not None else frame.shape
+                preprocessed = self._preprocess_for_rknn(frame)
+
+                raw_outputs = self.model.inference(inputs=[preprocessed])
+
+                if raw_outputs is None:
+                    self.logger.error(
+                        f"RKNN inference returned None (frame shape={frame.shape}) — skipping."
+                    )
+                    results_list.append(Results([], target_shape))
+                    continue
+
                 output_tensor = raw_outputs[0] # keep batch dim for format detection
 
-                # Auto-detect output format on first inference
+                # Auto-detect output format on first successful inference
                 if self._output_fmt is None:
                     _, d1, d2 = output_tensor.shape
-                    if d2 == 6:
-                        self._output_fmt = "end2end" # (1, 300, 6) - YOLO26 default
-                    else:
-                        self._output_fmt = "no_nms" # (1, 5, 8400) - YOLO11 / stripped
-                    self.logger.info(f"Detected RKNN output format: {self._output_fmt}, shape={output_tensor.shape}, dtype={output_tensor.dtype}")
+                    self._output_fmt = "end2end" if d2 == 6 else "no_nms"
+                    self.logger.info(
+                        f"Detected RKNN output format: {self._output_fmt}, "
+                        f"shape={output_tensor.shape}, dtype={output_tensor.dtype}"
+                    )
 
-                if output_tensor.dtype == np.int8: # Dequantize if int8
+                # Dequantize if needed
+                if output_tensor.dtype == np.int8:
                     output_tensor = output_tensor.astype(np.float32) / 128.0
-
-                target_shape = orig_shape if orig_shape is not None else frame.shape
+                elif output_tensor.dtype == np.uint8:
+                    output_tensor = output_tensor.astype(np.float32) / 255.0
 
                 if self._output_fmt == "end2end":
                     results_list.append(
-                        self._convert_rknn_end2end_outputs(
-                            output_tensor[0],
-                            target_shape
-                        )
+                        self._convert_rknn_end2end_outputs(output_tensor[0], target_shape)
                     )
                 else:
                     results_list.append(
-                        self._convert_rknn_outputs(
-                            output_tensor[0],
-                            target_shape
-                        )
+                        self._convert_rknn_outputs(output_tensor[0], target_shape)
                     )
-        else:
+
+        else:  # For these ultralytics handles its own preprocessing
             for frame in frames:
-                result = self.model(frame, verbose=False, imgsz=self.input_size[0])
+                # imgsz accepts (h, w), ultralytics will do its own letterboxing internally
+                result = self.model(
+                    frame,
+                    verbose=False,
+                    imgsz=(self.input_size[1], self.input_size[0]),
+                )
                 results_list.append(self._convert_ultralytics_to_results(result[0]))
 
         return results_list if is_list else results_list[0]
 
-    def _convert_rknn_outputs(self, frame_output, orig_shape):
-        # Squeeze batch dimension if present
+    def _convert_rknn_outputs(self, frame_output: np.ndarray, orig_shape) -> Results:
         if frame_output.ndim == 3:
             frame_output = frame_output[0]
 
-        # Transpose to [num_boxes, 5] if needed
+        # Ensure shape is [num_boxes, 5]
         if frame_output.shape[0] == 5 and frame_output.shape[1] > 5:
             frame_output = frame_output.T
 
-        # Remove invalid rows
-        valid_mask = ~np.isinf(frame_output).any(axis=1) & ~np.isnan(frame_output).any(axis=1)
+        # Drop inf/nan rows
+        valid_mask = (
+            ~np.isinf(frame_output).any(axis=1)
+            & ~np.isnan(frame_output).any(axis=1)
+        )
         frame_output = frame_output[valid_mask]
 
-        # Vectorized sigmoid on conf column — no Python loop
-        confs = 1 / (1 + np.exp(-frame_output[:, 4]))
+        if len(frame_output) == 0:
+            return Results([], orig_shape)
 
-        # Filter by confidence threshold before doing anything else
-        conf_mask = confs >= 0.5  # raised from 0.1
+        # Sigmoid on objectness column
+        confs     = 1 / (1 + np.exp(-frame_output[:, 4]))
+        conf_mask = confs >= 0.5
         frame_output = frame_output[conf_mask]
-        confs = confs[conf_mask]
+        confs        = confs[conf_mask]
 
         if len(frame_output) == 0:
             self.logger.info("No boxes passed confidence threshold.")
             return Results([], orig_shape)
 
-        # Vectorized coordinate remapping
+        # Remap from letterboxed space back to original image space
         orig_h, orig_w = orig_shape[:2]
         target_w, target_h = self.input_size
         scale = min(target_w / orig_w, target_h / orig_h)
-        new_w, new_h = int(orig_w * scale), int(orig_h * scale)
-        pad_x = (target_w - new_w) / 2
-        pad_y = (target_h - new_h) / 2
+        new_w  = int(orig_w * scale)
+        new_h  = int(orig_h * scale)
+        pad_x  = (target_w - new_w) / 2
+        pad_y  = (target_h - new_h) / 2
 
         x_c = (frame_output[:, 0] - pad_x) / scale
         y_c = (frame_output[:, 1] - pad_y) / scale
@@ -179,18 +221,26 @@ class YoloWrapper:
         x2s = (x_c + w / 2).astype(int)
         y2s = (y_c + h / 2).astype(int)
 
-        # Filter zero-size boxes
         size_mask = (x2s - x1s > 0) & (y2s - y1s > 0)
-        x1s, y1s, x2s, y2s, confs = x1s[size_mask], y1s[size_mask], x2s[size_mask], y2s[size_mask], confs[size_mask]
+        x1s, y1s, x2s, y2s, confs = (
+            x1s[size_mask], y1s[size_mask],
+            x2s[size_mask], y2s[size_mask],
+            confs[size_mask],
+        )
 
         if len(x1s) == 0:
             return Results([], orig_shape)
 
-        boxes = [Box([x1, y1, x2, y2], float(c)) for x1, y1, x2, y2, c in zip(x1s, y1s, x2s, y2s, confs)]
+        boxes  = [
+            Box([x1, y1, x2, y2], float(c))
+            for x1, y1, x2, y2, c in zip(x1s, y1s, x2s, y2s, confs)
+        ]
         scores = confs.tolist()
 
-        # Tighter NMS — 0.3 instead of 0.45 to kill the overlapping grid
-        nms_boxes = [[b.xyxy[0], b.xyxy[1], b.xyxy[2]-b.xyxy[0], b.xyxy[3]-b.xyxy[1]] for b in boxes]
+        nms_boxes = [
+            [b.xyxy[0], b.xyxy[1], b.xyxy[2] - b.xyxy[0], b.xyxy[3] - b.xyxy[1]]
+            for b in boxes
+        ]
         indices = cv2.dnn.NMSBoxes(nms_boxes, scores, score_threshold=0.5, nms_threshold=0.3)
         indices = indices.flatten() if len(indices) > 0 else []
 
@@ -202,30 +252,15 @@ class YoloWrapper:
 
     def _sigmoid(self, x):
         return 1 / (1 + np.exp(-x))
-
-    def letterbox(self, img, target_size=(640, 640)):
-        h, w = img.shape[:2]
-        target_w, target_h = target_size
-        scale = min(target_w / w, target_h / h)
-        new_w, new_h = int(w * scale), int(h * scale)
-        resized = cv2.resize(img, (new_w, new_h))
-        
-        pad_w = target_w - new_w
-        pad_h = target_h - new_h
-        top = pad_h // 2
-        bottom = pad_h - top
-        left = pad_w // 2
-        right = pad_w - left
-        padded = cv2.copyMakeBorder(resized, top, bottom, left, right, cv2.BORDER_CONSTANT, value=(114,114,114))
-        return padded, scale, left, top
     
-    def _convert_rknn_end2end_outputs(self, detections, orig_shape):
+    def _convert_rknn_end2end_outputs(self, detections: np.ndarray, orig_shape) -> Results:
         orig_h, orig_w = orig_shape[:2]
         target_w, target_h = self.input_size
         scale = min(target_w / orig_w, target_h / orig_h)
-        new_w, new_h = int(orig_w * scale), int(orig_h * scale)
-        pad_x = (target_w - new_w) / 2
-        pad_y = (target_h - new_h) / 2
+        new_w  = int(orig_w * scale)
+        new_h  = int(orig_h * scale)
+        pad_x  = (target_w - new_w) / 2
+        pad_y  = (target_h - new_h) / 2
 
         boxes = []
         for det in detections:

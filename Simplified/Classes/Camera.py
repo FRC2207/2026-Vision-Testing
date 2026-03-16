@@ -39,7 +39,8 @@ class Camera:
         min_confidence: float = 0.5,
         debug_mode: bool = False,
         subsystem: str = "field",
-        input_size: tuple[int, int]=(640, 640)
+        input_size: tuple[int, int]=(640, 640),
+        quantized: bool=True
     ):
         self.source = source
         self.camera_fov = camera_fov
@@ -52,6 +53,8 @@ class Camera:
         self.grayscale = grayscale
         self.yolo_model_file = yolo_model_file
         self.input_size = input_size
+
+        self.quantized = quantized
 
         # Camera transform stuff
         self.camera_pitch_angle = camera_downward_angle
@@ -69,7 +72,9 @@ class Camera:
 
         self.last_time = time.perf_counter()
 
-        if source.lower().endswith((".png", ".jpg", ".jpeg", ".bmp")):
+        self.frame = None
+
+        if isinstance(source, str) and source.lower().endswith((".png", ".jpg", ".jpeg", ".bmp")):
             self.is_image = True
             self.image = cv2.imread(source)
             if self.image is None:
@@ -92,8 +97,7 @@ class Camera:
             self.known_calibration_pixel_height * self.known_calibration_distance
         ) / self.ball_d_inches
 
-        self.model = YoloWrapper(self.yolo_model_file, self.input_size)
-        self.frame_lock = threading.Lock()
+        self.model = YoloWrapper(self.yolo_model_file, self.input_size, quantized=self.quantized)
         if not self.is_image:
             self.frame_lock = threading.Lock()
             threading.Thread(target=self._reader, daemon=True).start()
@@ -168,10 +172,37 @@ class Camera:
         img_input = np.expand_dims(img_resized, axis=0) # (1, 640, 640, 3)
         img_input = np.ascontiguousarray(img_input, dtype=np.uint8)
         return img_input
-        
-    def release(self):
-        if not self.is_image and hasattr(self, "cap") and self.cap:
-            self.cap.release()
+
+    def _filter_box(self, box: Box, img_w: int, img_h: int) -> bool:
+        x1, y1, x2, y2 = box.xyxy
+        w_px = x2 - x1
+        h_px = y2 - y1
+
+        if box.conf < self.min_confidence:
+            self.logger.info("Skipping detection due to low confidence.")
+            return False
+        if x1 < self.margin or y1 < self.margin or x2 > (img_w - self.margin):
+            self.logger.info("Skipping detection due to margin.")
+            return False
+        if h_px == 0:
+            return False
+        aspect_ratio = w_px / h_px
+        if not (0.8 <= aspect_ratio <= 1.2):
+            self.logger.info("Skipping detection due to rectangular shape.")
+            return False
+        return True
+
+    def _box_to_robot_point(self, box: Box, img_w: int, img_h: int) -> np.ndarray | None:
+        x1, y1, x2, y2 = box.xyxy
+        w_px = x2 - x1
+        h_px = y2 - y1
+        avg_pixels = (w_px + h_px) / 2.0
+        if avg_pixels <= 0:
+            return None
+        cx = (x1 + x2) / 2.0
+        cy = (y1 + y2) / 2.0
+        distance_los = (self.ball_d_inches * self.focal_length_pixels) / avg_pixels
+        return self._pixel_to_robot_coordinates(cx, cy, distance_los, img_w, img_h)
 
     def get_yolo_data(self):
         # self.logger.info("Calling: self.get_frame()")
@@ -181,17 +212,7 @@ class Camera:
             self.logger.warning("Frame not retrieved properly from camera (frame was None)")
             return None, None
 
-        frame_preprocessed = self._preprocess_for_rknn(frame)
-        if frame_preprocessed is None:
-            self.logger.warning("Preprocessing failed; skipping prediction")
-            return None, frame
-        
-        # self.logger.info("Calling self.model.predict(frame_preprocessed)")
-        # RKNN needs a preprocessed (4D) frame, ultralytics needs a raw (3D) frame
-        if self.model.model_type == "rknn":
-            results = self.model.predict(frame_preprocessed, orig_shape=frame.shape)
-        else:
-            results = self.model.predict(frame, orig_shape=frame.shape)   
+        results = self.model.predict(frame, orig_shape=frame.shape)
 
         annotated_frame = frame.copy()
 
@@ -233,18 +254,7 @@ class Camera:
             h_pixels = y2 - y1
             conf = box.conf
 
-            # Only accept things with a high enough confidence
-            if conf < self.min_confidence:
-                self.logger.info("Skipping detection due to low confidence.")
-                continue
-            # Only accept boxes that are in the margin
-            if x1 < self.margin or y1 < self.margin or x2 > (img_w - self.margin):
-                self.logger.info("Skipping detection due to margin.")
-                continue
-            aspect_ratio = w_pixels / h_pixels
-            # Only accept boxes that are roughly square
-            if not (0.8 <= aspect_ratio <= 1.2):
-                self.logger.info("Skipping detection due to rectangular shape.")
+            if not self._filter_box(box, img_w, img_h):
                 continue
 
             cx = (x1 + x2) / 2.0
@@ -258,13 +268,9 @@ class Camera:
             distance_los = (self.ball_d_inches * self.focal_length_pixels) / avg_pixels
 
             # Transform from pixel coordinates to robot-relative coordinates
-            robot_point = self._pixel_to_robot_coordinates(
-                cx, cy, distance_los, img_w, img_h
-            )
-
-            if robot_point is not None:
-                map_points.append(robot_point)
-
+            pt = self._box_to_robot_point(box, img_w, img_h)
+            if pt is not None:
+                map_points.append(pt)
         return np.array(map_points) if map_points else np.empty((0, 2))
 
     def run(self):
@@ -290,18 +296,8 @@ class Camera:
 
             # self.logger.info(f"Box: ({x1:.1f}, {y1:.1f}) to ({x2:.1f}, {y2:.1f}), Conf: {conf:.3f}")
 
-            # Only accept things with a high enough confidence
-            if conf < self.min_confidence:
-                self.logger.info("Skipping detection due to low confidence.")
-                continue
-            # Only accept boxes that are in the margin
-            if x1 < self.margin or y1 < self.margin or x2 > (img_w - self.margin):
-                self.logger.info("Skipping detection due to margin.")
-                continue
-            aspect_ratio = w_pixels / h_pixels
-            # Only accept boxes that are roughly square
-            if not (0.8 <= aspect_ratio <= 1.2):
-                self.logger.info("Skipping detection due to rectangular shape.")
+            # Filter boxes for things like confidence, apsect, etc.
+            if not self._filter_box(box, img_w, img_h):
                 continue
 
             cx = (x1 + x2) / 2.0
@@ -315,12 +311,11 @@ class Camera:
             distance_los = (self.ball_d_inches * self.focal_length_pixels) / avg_pixels
 
             # Transform from pixel coordinates to robot-relative coordinates
-            robot_point = self._pixel_to_robot_coordinates(
-                cx, cy, distance_los, img_w, img_h
-            )
-
-            if robot_point is not None:
-                map_points.append(robot_point)
+            pt = self._box_to_robot_point(box, img_w, img_h)
+            if pt is not None:
+                map_points.append(pt)
+            else:
+                self.logger.info("Skipping detection due to illegal shape.")
 
         return np.array(map_points) if map_points else np.empty((0, 2)), frame
 
@@ -356,20 +351,18 @@ class Camera:
         img_h: int,
     ) -> np.ndarray | None:
         # I have no clue if this math is actually right, but the tests say yes
-        # Its partly vibe coded but I reviewd it but also im failing my precalc class so idk
+        # Its partly vibe coded but I reviewed it but also im failing my precalc class so idk
 
-        pixel_offset_x = pixel_x - (img_w / 2.0)
+        pixel_offset_x      = pixel_x - (img_w / 2.0)
         horizontal_angle_rad = math.atan(pixel_offset_x / self.focal_length_pixels)
 
-        camera_height = self.camera_height
-
-        if camera_height > 0 and distance_los > camera_height:
-            true_horizontal_distance = math.sqrt(distance_los**2 - camera_height**2)
+        if self.camera_height > 0 and distance_los > self.camera_height:
+            true_horizontal_distance = math.sqrt(distance_los**2 - self.camera_height**2)
         else:
             true_horizontal_distance = distance_los
 
         left_right_distance = true_horizontal_distance * math.sin(horizontal_angle_rad)
-        forward_distance = true_horizontal_distance * math.cos(horizontal_angle_rad)
+        forward_distance    = true_horizontal_distance * math.cos(horizontal_angle_rad)
 
         yaw_rad = math.radians(self.camera_bot_relative_yaw)
         cos_yaw = math.cos(yaw_rad)
@@ -378,11 +371,8 @@ class Camera:
         x_rotated = forward_distance * sin_yaw + left_right_distance * cos_yaw
         y_rotated = forward_distance * cos_yaw - left_right_distance * sin_yaw
 
-        x_inches = x_rotated + self.camera_x
-        y_inches = y_rotated + self.camera_y
-
-        x_meters = x_inches * 0.0254
-        y_meters = y_inches * 0.0254
+        x_meters = (x_rotated + self.camera_x) * 0.0254
+        y_meters = (y_rotated + self.camera_y) * 0.0254
 
         return np.array([x_meters, y_meters], dtype=np.float32)
 
@@ -391,3 +381,7 @@ class Camera:
         if not self.is_image:
             self.cap.release()
         cv2.destroyAllWindows()
+
+    def release(self):
+        if not self.is_image and hasattr(self, "cap") and self.cap:
+            self.cap.release()
