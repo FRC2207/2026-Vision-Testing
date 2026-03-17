@@ -119,6 +119,9 @@ if __name__ == "__main__":
                     camera_app.set_frame(frame)
                     flask_s = time.perf_counter() - flask_start
 
+            for fuel in fuel_positions_fuel_list:
+                print(fuel)
+
             if len(fuel_positions_fuel_list) == 0:
                 logger.warning("No fuel positions detected. Skipping loop iteration.")
                 loop_s = time.perf_counter() - start_time
