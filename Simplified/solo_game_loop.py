@@ -3,6 +3,7 @@ from Classes.Camera import Camera
 from Classes.PathPlanner import PathPlanner
 from Classes.NetworkTableHandler import NetworkTableHandler
 import time
+import math
 import constants
 from Classes.CameraApp import CameraApp
 import threading
@@ -102,7 +103,9 @@ if __name__ == "__main__":
             camera_lag_s = camera.get_frame_age()
 
             for fuel_position in fuel_positions:
-                print(fuel_position)
+                x, y = fuel_position[0], fuel_position[1]
+                distance = math.hypot(x, y)
+                print(f"Distance: {distance}, X: {x}, Y: {y}")
 
             flask_s = None
             if constants.APP_MODE:

@@ -99,6 +99,12 @@ class Camera:
             if not self.cap.isOpened():
                 self.logger.error(f"Cannot open source {self.source}")
                 raise ValueError(f"Cannot open source {source}")
+            
+            if not self.is_image:
+                self.logger.info("Waiting for first frame...")
+                while self.get_frame() is None:
+                    time.sleep(0.05)
+                self.logger.info("First frame received.")
         self.stopped = False
         # self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
         # self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
@@ -134,10 +140,9 @@ class Camera:
 
             with self.frame_lock:
                 self.frame = frame
+                self.frame_timestamp = time.perf_counter()
                 
             # self.frame = frame
-            self.frame_timestamp = time.perf_counter()
-
             time.sleep(0.01) # Help not overuse CPU
 
     def get_frame_age(self) -> float | None:

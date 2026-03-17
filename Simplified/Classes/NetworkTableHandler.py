@@ -19,7 +19,7 @@ class NetworkTableHandler:
             time.sleep(1)
             i += 1
 
-        if i < 5:
+        if i >= 5:
             self.logger.error(f"Network tables could not connect after 5 seconds")
         
         self._subscribers = {}
