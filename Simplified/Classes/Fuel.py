@@ -1,4 +1,5 @@
 import numpy as np
+import math
 
 class Fuel:
     def __init__(self, x: int, y: int, id: int=-1):
@@ -16,4 +17,4 @@ class Fuel:
         self.id = id
 
     def __str__(self):
-        return f"X: {self.x}, Y: {self.y}"
+        return f"Distance: {math.hypot(self.x, self.y)}, X: {self.x}, Y: {self.y}"

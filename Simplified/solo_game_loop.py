@@ -103,9 +103,7 @@ if __name__ == "__main__":
             camera_lag_s = camera.get_frame_age()
 
             for fuel_position in fuel_positions:
-                x, y = fuel_position[0], fuel_position[1]
-                distance = math.hypot(x, y)
-                print(f"Distance: {distance}, X: {x}, Y: {y}")
+                print(fuel_position)
 
             flask_s = None
             if constants.APP_MODE:
