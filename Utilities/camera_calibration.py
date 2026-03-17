@@ -154,11 +154,11 @@ camera = Camera(
 
 if __name__ == "__main__":
     # Get user inputs
-    camera_id = 0
+    camera_id = 1
     
-    yolo_model = input("Enter YOLO model path (default: YoloModels/gray-3.0.pt): ").strip()
+    yolo_model = input("Enter YOLO model path (default: YoloModels/v26/nano/color-3.1-v26.onnx): ").strip()
     if not yolo_model:
-        yolo_model = "YoloModels/gray-3.0.pt"
+        yolo_model = "YoloModels/v26/nano/color-3.1-v26.onnx"
     
     ball_diam = input("Enter ball diameter in inches (default: 5.90551): ").strip()
     if not ball_diam:
