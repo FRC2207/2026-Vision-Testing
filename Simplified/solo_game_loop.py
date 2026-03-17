@@ -10,6 +10,7 @@ import logging
 import numpy as np
 from Classes.Fuel import Fuel
 from Classes.FuelTracker import FuelTracker
+from Classes.Metrics import Metrics
 
 logging.basicConfig(
     level=logging.INFO,
@@ -41,6 +42,8 @@ camera = Camera(
     quantized=False,
     unit=constants.UNIT
 )
+
+metrics = Metrics()
 
 if constants.APP_MODE:
     camera_app = CameraApp()
@@ -81,29 +84,45 @@ if __name__ == "__main__":
         # while i < 500:
         while True:
             start_time = time.perf_counter()
-            # logger.info("Running: camera.run()")
+            
+            # Vision
+            vision_start = time.perf_counter()
             try:
                 raw_fuel_positions, annotated_frame = camera.run()
                 fuel_positions = numpy_to_fuel_list(raw_fuel_positions)
             except Exception as e:
                 fuel_positions, annotated_frame = [], None
                 logger.exception(f"Exception: {e}")
+            vision_s = time.perf_counter() - vision_start
 
             fuel_tracker.set_fuel_list(fuel_positions)
             fuel_tracker.sort()
             fuel_positions = fuel_tracker.get_fuel_list()
 
+            camera_lag_s = camera.get_frame_age()
+
             for fuel_position in fuel_positions:
                 print(fuel_position)
 
+            flask_s = None
             if constants.APP_MODE:
                 if annotated_frame is None:
                     logger.warning("Frame not returned from camera.run()")
                 else:
+                    flask_start = time.perf_counter()
                     camera_app.set_frame(annotated_frame)
+                    flask_s = time.perf_counter() - flask_start
 
             if len(fuel_positions) == 0:
                 logger.warning("No fuel positions detected. Skipping loop iteration.")
+                loop_s = time.perf_counter() - start_time
+                metrics.record(
+                    loop_s=loop_s,
+                    vision_s=vision_s,
+                    camera_lag_s=camera_lag_s,
+                    flask_s=flask_s,
+                )
+                metrics.tick()
                 continue
             else:
                 # logger.info(f"Detected fuels: {len(fuel_positions)}")
@@ -119,8 +138,17 @@ if __name__ == "__main__":
 
             end_time = time.perf_counter()
             est_fps = 1 / (end_time - start_time)
-            logger.info(f"Loop run time: {end_time - start_time}. Est FPS: {est_fps}")
+            # logger.info(f"Loop run time: {end_time - start_time}. Est FPS: {est_fps}")
             # logger.info(f"Detected Fuel Positions: {[fuel_position for fuel_position in fuel_positions]}")
             # i += 1
+
+            loop_s = time.perf_counter() - start_time
+            metrics.record(
+                loop_s=loop_s,
+                vision_s=vision_s,
+                camera_lag_s=camera_lag_s,
+                flask_s=flask_s,
+            )
+            metrics.tick()
     finally:
         camera.destroy()

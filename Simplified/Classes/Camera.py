@@ -72,6 +72,8 @@ class Camera:
         self.logger = logging.getLogger(__name__)
         self.logger.info(f"Camera object created with: {self.__dict__}")
 
+        self.frame_timestamp = None
+
         self.conversions = {
             "meter": 0.0254,
             "inch":  1.0,
@@ -134,8 +136,16 @@ class Camera:
                 self.frame = frame
                 
             # self.frame = frame
+            self.frame_timestamp = time.perf_counter()
 
             time.sleep(0.01) # Help not overuse CPU
+
+    def get_frame_age(self) -> float | None:
+        with self.frame_lock:
+            ts = self.frame_timestamp
+        if ts is None:
+            return None
+        return time.perf_counter() - ts
 
     def get_frame(self, preprocessed=False):
         frame = None
