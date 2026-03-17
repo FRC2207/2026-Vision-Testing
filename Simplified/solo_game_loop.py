@@ -12,6 +12,13 @@ import numpy as np
 from Classes.Fuel import Fuel
 from Classes.FuelTracker import FuelTracker
 from Classes.Metrics import Metrics
+import signal
+
+# This is something for clean shutdowns (usually ctrl + c)
+shutdown_event = threading.Event()
+
+signal.signal(signal.SIGINT,  lambda sig, frame: shutdown_event.set())
+signal.signal(signal.SIGTERM, lambda sig, frame: shutdown_event.set())
 
 logging.basicConfig(
     level=logging.INFO,
@@ -69,7 +76,8 @@ if __name__ == "__main__":
         try:
             raw_fuel_positions, annotated_frame = camera.run()
             fuel_positions = numpy_to_fuel_list(raw_fuel_positions)
-        except:
+        except Exception as e:
+            logger.warning(f"Warm-up run failed: {e}")
             fuel_positions = []
 
         planner = PathPlanner(
@@ -83,7 +91,7 @@ if __name__ == "__main__":
 
         # i = 0
         # while i < 500:
-        while True:
+        while not shutdown_event.is_set():
             start_time = time.perf_counter()
             
             # Vision
@@ -137,8 +145,8 @@ if __name__ == "__main__":
                     fuel_positions, "field_positions", "yolo_data"
                 )
 
-            end_time = time.perf_counter()
-            est_fps = 1 / (end_time - start_time)
+            # end_time = time.perf_counter()
+            # est_fps = 1 / (end_time - start_time)
             # logger.info(f"Loop run time: {end_time - start_time}. Est FPS: {est_fps}")
             # logger.info(f"Detected Fuel Positions: {[fuel_position for fuel_position in fuel_positions]}")
             # i += 1
