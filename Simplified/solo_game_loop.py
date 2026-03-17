@@ -79,13 +79,6 @@ if __name__ == "__main__":
             logger.warning(f"Warm-up run failed: {e}")
             fuel_positions = []
 
-        # planner = PathPlanner(
-        #     fuel_positions_numpy_list,
-        #     constants.STARTING_POSITION,
-        #     constants.ELIPSON,
-        #     constants.MIN_SAMPLES,
-        #     debug_mode=constants.DEBUG_MODE
-        # )
         fuel_tracker = FuelTracker(fuel_positions_fuel_list, constants.DISTANCE_THRESHOLD)
 
         # i = 0
