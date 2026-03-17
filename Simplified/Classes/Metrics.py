@@ -15,7 +15,7 @@ class Metrics:
         "flask_s":      ("Flask update",   "ms",   1000.0),
     }
 
-    def __init__(self, window: int = 30, log_every: int = 30):
+    def __init__(self, window: int = 30, log_every: int = 30, output_file: str="metrics.html"):
         self.window    = window
         self.log_every = log_every
         self._itr      = 0
@@ -23,6 +23,7 @@ class Metrics:
         self.logger = logging.getLogger(__name__)
         self._timeline: dict[str, list[tuple[float, float]]] = {k: [] for k in self.SERIES}
         self._rolling: dict[str, deque] = {}
+        self.output_file = output_file
 
     def record(self, **kwargs: float):
         for key, val in kwargs.items():
@@ -31,6 +32,8 @@ class Metrics:
             if key not in self._data:
                 self._data[key] = deque(maxlen=self.window)
             self._data[key].append(val)
+            if key in self.SERIES:
+                self._timeline[key].append((t, val))
  
     def avg(self, key: str) -> float | None:
         if key not in self._data or len(self._data[key]) == 0:
