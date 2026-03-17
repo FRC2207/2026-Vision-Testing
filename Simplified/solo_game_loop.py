@@ -153,3 +153,4 @@ if __name__ == "__main__":
             metrics.tick()
     finally:
         camera.destroy()
+        metrics.destroy()
