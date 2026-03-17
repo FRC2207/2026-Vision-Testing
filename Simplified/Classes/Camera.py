@@ -99,14 +99,7 @@ class Camera:
             if not self.cap.isOpened():
                 self.logger.error(f"Cannot open source {self.source}")
                 raise ValueError(f"Cannot open source {source}")
-            
-            if not self.is_image:
-                self.frame_lock = threading.Lock()
-                threading.Thread(target=self._reader, daemon=True).start()
-                self.logger.info("Waiting for first frame...")
-                while self.get_frame() is None:
-                    time.sleep(0.05)
-                self.logger.info("First frame received.")
+
         self.stopped = False
         # self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
         # self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
@@ -117,7 +110,9 @@ class Camera:
         ) / self.ball_d_inches
 
         self.model = YoloWrapper(self.yolo_model_file, self.input_size, quantized=self.quantized)
-
+        
+        self.frame_lock = threading.Lock()
+        threading.Thread(target=self._reader, daemon=True).start()
 
     def _reader(self):
         # self.logger.info(f"self.stopped: {self.stopped}")
