@@ -10,6 +10,8 @@ from scipy.spatial.transform import Rotation
 import threading
 from .GenericYolo.genericYolo import Box, Results, YoloWrapper
 
+# Consider adding skipping stale frames
+
 class Camera:
     # __slots__ = (
     #     'source', 'camera_fov', 'known_calibration_distance', 'ball_d_inches',
@@ -94,7 +96,7 @@ class Camera:
             # Assume it's a video file or webcam index
             self.is_image = False
             self.cap = cv2.VideoCapture(source)
-            # self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+            self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
 
             if not self.cap.isOpened():
                 self.logger.error(f"Cannot open source {self.source}")

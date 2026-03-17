@@ -93,7 +93,7 @@ if __name__ == "__main__":
         # while i < 500:
         while not shutdown_event.is_set():
             start_time = time.perf_counter()
-            
+            camera_lag_s = camera.get_frame_age()
             # Vision
             vision_start = time.perf_counter()
             try:
@@ -107,8 +107,6 @@ if __name__ == "__main__":
             fuel_tracker.set_fuel_list(fuel_positions)
             fuel_tracker.sort()
             fuel_positions = fuel_tracker.get_fuel_list()
-
-            camera_lag_s = camera.get_frame_age()
 
             for fuel_position in fuel_positions:
                 print(fuel_position)
