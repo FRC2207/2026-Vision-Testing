@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 
 # Camera class
 camera = Camera(
-    "/dev/video1",
+    "/dev/video0",
     # "Images/1.png",
     constants.CAMERA_FOV,
     constants.KNOWN_CALIBRATION_DISTANCE,
@@ -47,7 +47,7 @@ camera = Camera(
     debug_mode=constants.DEBUG_MODE,
     subsystem="field",
     input_size=(constants.YOLO_INPUT_SIZE, constants.YOLO_INPUT_SIZE),
-    quantized=False,
+    quantized=True,
     unit=constants.UNIT
 )
 
@@ -63,10 +63,8 @@ if constants.USE_NETWORK_TABLES:
 def numpy_to_fuel_list(fuel_positions):
     return [Fuel(p[0], p[1]) for p in fuel_positions]
 
-
 def fuel_list_to_numpy(fuel_list: list[Fuel]):
     return np.array([fuel.get_position() for fuel in fuel_list])
-
 
 if __name__ == "__main__":
     try:
@@ -75,19 +73,20 @@ if __name__ == "__main__":
         # Create planner
         try:
             raw_fuel_positions, annotated_frame = camera.run()
-            fuel_positions = numpy_to_fuel_list(raw_fuel_positions)
+            fuel_positions_fuel_list = numpy_to_fuel_list(raw_fuel_positions)
+            fuel_positions_numpy_list = raw_fuel_positions
         except Exception as e:
             logger.warning(f"Warm-up run failed: {e}")
             fuel_positions = []
 
-        planner = PathPlanner(
-            fuel_list_to_numpy(fuel_positions),
-            constants.STARTING_POSITION,
-            constants.ELIPSON,
-            constants.MIN_SAMPLES,
-            debug_mode=constants.DEBUG_MODE
-        )
-        fuel_tracker = FuelTracker(fuel_positions, constants.DISTANCE_THRESHOLD)
+        # planner = PathPlanner(
+        #     fuel_positions_numpy_list,
+        #     constants.STARTING_POSITION,
+        #     constants.ELIPSON,
+        #     constants.MIN_SAMPLES,
+        #     debug_mode=constants.DEBUG_MODE
+        # )
+        fuel_tracker = FuelTracker(fuel_positions_fuel_list, constants.DISTANCE_THRESHOLD)
 
         # i = 0
         # while i < 500:
@@ -98,18 +97,19 @@ if __name__ == "__main__":
             vision_start = time.perf_counter()
             try:
                 raw_fuel_positions, annotated_frame = camera.run()
-                fuel_positions = numpy_to_fuel_list(raw_fuel_positions)
+                fuel_positions_fuel_list = numpy_to_fuel_list(raw_fuel_positions)
+                fuel_positions_numpy_list = raw_fuel_positions
             except Exception as e:
-                fuel_positions, annotated_frame = [], None
+                fuel_positions_fuel_list, fuel_positions_numpy_list, annotated_frame = [], None, None
                 logger.exception(f"Exception: {e}")
             vision_s = time.perf_counter() - vision_start
 
-            fuel_tracker.set_fuel_list(fuel_positions)
+            fuel_tracker.set_fuel_list(fuel_positions_fuel_list)
             fuel_tracker.sort()
-            fuel_positions = fuel_tracker.get_fuel_list()
+            fuel_positions_fuel_list = fuel_tracker.get_fuel_list()
 
-            for fuel_position in fuel_positions:
-                print(fuel_position)
+            # for fuel_position in fuel_positions:
+                # print(f"\r{fuel_position}")
 
             flask_s = None
             if constants.APP_MODE:
@@ -120,7 +120,7 @@ if __name__ == "__main__":
                     camera_app.set_frame(annotated_frame)
                     flask_s = time.perf_counter() - flask_start
 
-            if len(fuel_positions) == 0:
+            if len(fuel_positions_fuel_list) == 0:
                 logger.warning("No fuel positions detected. Skipping loop iteration.")
                 loop_s = time.perf_counter() - start_time
                 metrics.record(
@@ -135,13 +135,19 @@ if __name__ == "__main__":
                 # logger.info(f"Detected fuels: {len(fuel_positions)}")
                 pass
 
-            _, fuel_positions = planner.update_fuel_positions(
-                fuel_list_to_numpy(fuel_positions)
-            )
+            # _, fuel_positions = planner.update_fuel_positions(
+            #     fuel_positions_numpy_list
+            # )
+            network_start_time = time.perf_counter()
             if constants.USE_NETWORK_TABLES:
-                network_handler.send_data(
-                    fuel_positions, "field_positions", "yolo_data"
+                # network_handler.send_data(
+                    # fuel_positions_fuel_list, "Vision", "VisionData"
+                # ) Old number array
+
+                network_handler.send_fuel_list(
+                    fuel_positions_fuel_list, "vision_data","VisionData"
                 )
+            network_s = time.perf_counter() - network_start_time
 
             # end_time = time.perf_counter()
             # est_fps = 1 / (end_time - start_time)
@@ -155,6 +161,7 @@ if __name__ == "__main__":
                 vision_s=vision_s,
                 camera_lag_s=camera_lag_s,
                 flask_s=flask_s,
+                network_s=network_s
             )
             metrics.tick()
     finally:

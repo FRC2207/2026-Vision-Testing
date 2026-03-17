@@ -3,24 +3,33 @@ import logging
 import numpy as np
 from Classes.Fuel import Fuel
 import time
+import dataclasses
+import wpiutil.wpistruct
+from ntcore import NetworkTableInstance
+
+@wpiutil.wpistruct.make_wpistruct(name="Fuel")
+@dataclasses.dataclass
+class FuelStruct:
+    x: float
+    y: float
 
 class NetworkTableHandler:
     def __init__(self, ip: str):
         self.ip = ip
         self.logger = logging.getLogger(__name__)
         self.inst = ntcore.NetworkTableInstance.getDefault()
+        self.inst.setServer(self.ip)
         self.inst.startClient4("CustomVisionStuff")
-        self.inst.setServerTeam(2207)
 
         i = 0
-        while (not self.inst.isConnected()) and (i < 5):
+        while (not self.inst.isConnected()) and (i < 15):
             self.logger.warning("Network tables not connected, attempting to connect.")
 
             time.sleep(1)
             i += 1
 
-        if i >= 5:
-            self.logger.error(f"Network tables could not connect after 5 seconds")
+        if i >= 15:
+            self.logger.error(f"Network tables could not connect after 15 seconds")
         
         self._subscribers = {}
         self._tables = {}
@@ -31,22 +40,58 @@ class NetworkTableHandler:
         return self._tables[table_name]
 
     def send_data(self, data, data_name: str, table_name: str):
-        if not self.inst.isConnected():
-            return
+        try:
+            if not self.inst.isConnected():
+                return
 
-        table = self._get_table(table_name)
+            table = self._get_table(table_name)
+            
+            if isinstance(data, list) and len(data) > 0 and isinstance(data[0], Fuel):
+                positions = [f.get_position_normally() for f in data]
+                table.putNumberArray(f"{data_name}_X", [float(p[0]) for p in positions])
+                table.putNumberArray(f"{data_name}_Y", [float(p[1]) for p in positions])
+            elif isinstance(data, Fuel):
+                table.putNumberArray(f"{data_name}_X", data.get_position_normally()[0])
+                table.putNumberArray(f"{data_name}_Y", data.get_position_normally()[1])
+            elif isinstance(data, (int, float)):
+                table.putNumber(data_name, float(data))
+            elif isinstance(data, str):
+                table.putString(data_name, data)
+            elif isinstance(data, bool):
+                table.putBoolean(data_name, data)
+            else:
+                self.logger.warning("The data type is not recognized, not sending data")
+                
+            self.inst.flush()
+        except Exception as e:
+            self.logger.error(f"Could not send data to network tables {self.ip}.")
+            return
         
-        if isinstance(data, list) and len(data) > 0 and isinstance(data[0], Fuel):
-            positions = [f.get_position() for f in data]
-            table.putNumberArray(f"{data_name}_X", [p[0] for p in positions])
-            table.putNumberArray(f"{data_name}_Y", [p[1] for p in positions])
-        
-        elif isinstance(data, (int, float)):
-            table.putNumber(data_name, float(data))
-        elif isinstance(data, str):
-            table.putString(data_name, data)
-        elif isinstance(data, bool):
-            table.putBoolean(data_name, data)
+        self.logger.info(f"Data sent to network tables {self.ip}")
+        return
+    
+    def send_fuel_list(self, fuels: list[Fuel], data_name: str="fuel_data", table_name: str="VisionData"):
+        try:
+            if not self.inst.isConnected():
+                return
+
+            table = self._get_table(table_name)
+            
+            struct_list = []
+            for f in fuels:
+                pos = f.get_position_normally()
+                struct_list.append(FuelStruct(x=float(pos[0]), y=float(pos[1])))
+
+            pub_key = f"pub/{table_name}/{data_name}"
+            if pub_key not in self._subscribers:
+                self._subscribers[pub_key] = table.getStructArrayTopic(data_name, FuelStruct).publish()
+            
+            self._subscribers[pub_key].set(struct_list)
+            self.inst.flush()
+            
+            self.logger.info(f"Sent {len(struct_list)} fuels via StructArray")
+        except Exception as e:
+            self.logger.error(f"Failed to send fuel structs: {e}")
 
     def get_data(self, data_type, data_name: str, table_name: str):
         if not self.inst.isConnected():

@@ -114,7 +114,8 @@ class Camera:
         self.model = YoloWrapper(self.yolo_model_file, self.input_size, quantized=self.quantized)
         
         self.frame_lock = threading.Lock()
-        threading.Thread(target=self._reader, daemon=True).start()
+        if not self.is_image:
+            threading.Thread(target=self._reader, daemon=True).start()
 
     def _reader(self):
         # self.logger.info(f"self.stopped: {self.stopped}")
@@ -200,16 +201,16 @@ class Camera:
         h_px = y2 - y1
 
         if box.conf < self.min_confidence:
-            self.logger.info("Skipping detection due to low confidence.")
+            # self.logger.info("Skipping detection due to low confidence.")
             return False
         if x1 < self.margin or y1 < self.margin or x2 > (img_w - self.margin):
-            self.logger.info("Skipping detection due to margin.")
+            # self.logger.info("Skipping detection due to margin.")
             return False
         if h_px == 0:
             return False
         aspect_ratio = w_px / h_px
         if not (0.8 <= aspect_ratio <= 1.2):
-            self.logger.info("Skipping detection due to rectangular shape.")
+            # self.logger.info("Skipping detection due to rectangular shape.")
             return False
         return True
 

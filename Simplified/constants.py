@@ -5,7 +5,7 @@ import json
 
 DEBUG_MODE = True
 APP_MODE = True
-USE_NETWORK_TABLES = False # Obvisouly shuold be set to true for game, but testing set to False
+USE_NETWORK_TABLES = True # Obvisouly shuold be set to true for game, but testing set to False
 
 #######################################################################
 # Custom PathPlanner Stuff
@@ -46,7 +46,8 @@ KNOWN_CALIBRATION_PIXEL_HEIGHT = 292.8333333333333
 # YOLO_MODEL_FILE = "YoloModels/v8_or_v11/3.1-320x320/color-3.1-v11.onnx"
 YOLO_MODEL_FILE = "YoloModels/v26/nano/model.rknn"
 GRAYSCALE = False
-NETWORKTABLES_IP = "10.22.7.2" # Pretty sure this is right
+# NETWORKTABLES_IP = "10.22.7.2" # Pretty sure this is right
+NETWORKTABLES_IP = "10.22.7.21"
 
 with open("Simplified/camera_positions.json", "r") as file:
     data = json.load(file)

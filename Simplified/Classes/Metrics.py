@@ -14,6 +14,7 @@ class Metrics:
         "vision_s":     ("Vision time",    "ms",   1000.0),
         "camera_lag_s": ("Camera lag",     "ms",   1000.0),
         "flask_s":      ("Flask update",   "ms",   1000.0),
+        "network_s":    ("Network Tables", "ms",   1000.0)
     }
 
     def __init__(self, window: int = 30, log_every: int = 30, output_file: str="metrics.html"):

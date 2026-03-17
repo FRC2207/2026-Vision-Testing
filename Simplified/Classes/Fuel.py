@@ -10,6 +10,9 @@ class Fuel:
     def get_position(self):
         return np.array([self.x, self.y])
     
+    def get_position_normally(self):
+        return (self.x, self.y)
+    
     def get_id(self):
         return self.id
     
