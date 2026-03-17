@@ -1,5 +1,6 @@
 from collections import deque
 import logging
+import time
 
 try:
     import plotly.graph_objects as go
@@ -24,8 +25,10 @@ class Metrics:
         self._timeline: dict[str, list[tuple[float, float]]] = {k: [] for k in self.SERIES}
         self._rolling: dict[str, deque] = {}
         self.output_file = output_file
+        self._start_wall = time.time()
 
     def record(self, **kwargs: float):
+        t = time.time() - self._start_wall
         for key, val in kwargs.items():
             if val is None:
                 continue
