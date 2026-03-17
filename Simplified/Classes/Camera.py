@@ -101,6 +101,8 @@ class Camera:
                 raise ValueError(f"Cannot open source {source}")
             
             if not self.is_image:
+                self.frame_lock = threading.Lock()
+                threading.Thread(target=self._reader, daemon=True).start()
                 self.logger.info("Waiting for first frame...")
                 while self.get_frame() is None:
                     time.sleep(0.05)
@@ -115,9 +117,7 @@ class Camera:
         ) / self.ball_d_inches
 
         self.model = YoloWrapper(self.yolo_model_file, self.input_size, quantized=self.quantized)
-        if not self.is_image:
-            self.frame_lock = threading.Lock()
-            threading.Thread(target=self._reader, daemon=True).start()
+
 
     def _reader(self):
         # self.logger.info(f"self.stopped: {self.stopped}")
