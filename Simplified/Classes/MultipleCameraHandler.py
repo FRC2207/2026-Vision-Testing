@@ -1,6 +1,8 @@
 from Classes.Camera import Camera
+import cv2
 import numpy as np
 import logging
+
 
 class MultipleCameraHandler:
     """Runs multiple cameras that share the same vision model (each Camera owns its own model instance)."""
@@ -28,7 +30,20 @@ class MultipleCameraHandler:
         valid = [f for f in frames if f is not None]
         if not valid:
             return None
-        return np.hstack(valid)
+        if len(valid) == 1:
+            return valid[0]
+
+        target_h = min(f.shape[0] for f in valid)
+        resized = []
+        for f in valid:
+            h, w = f.shape[:2]
+            if h != target_h:
+                scale = target_h / h
+                new_w = int(w * scale)
+                f = cv2.resize(f, (new_w, target_h), interpolation=cv2.INTER_AREA)
+            resized.append(f)
+
+        return np.hstack(resized)
 
     def destroy(self):
         for cam in self.cameras:
