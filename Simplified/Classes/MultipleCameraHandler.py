@@ -10,36 +10,45 @@ class MultipleCameraHandler:
         self.cameras = cameras
         self.logger = logging.getLogger(__name__)
         self.vision_model_path = vision_model_path
+        self._annotated_frames: list = [None] * len(cameras)
 
     def predict(self) -> np.ndarray:
         all_positions = []
-        for camera in self.cameras:
+        for i, camera in enumerate(self.cameras):
             try:
-                positions, _ = camera.run()
+                positions, annotated = camera.run()
+                self._annotated_frames[i] = annotated
                 if positions is not None and len(positions) > 0:
                     all_positions.append(positions)
             except Exception as e:
                 self.logger.warning(f"Camera {camera.source} failed during predict: {e}")
+                self._annotated_frames[i] = None
 
         if all_positions:
             return np.vstack(all_positions)
         return np.empty((0, 2))
 
     def get_combined_frame(self):
-        frames = [cam.get_frame() for cam in self.cameras]
-        valid = [f for f in frames if f is not None]
-        if not valid:
-            return None
-        if len(valid) == 1:
-            return valid[0]
+        frames = []
+        for i, cam in enumerate(self.cameras):
+            f = self._annotated_frames[i]
+            if f is None:
+                f = cam.get_frame()  # fallback to raw
+            if f is not None:
+                frames.append(f)
 
-        target_h = min(f.shape[0] for f in valid)
+        if not frames:
+            return None
+        if len(frames) == 1:
+            return frames[0]
+
+        # Normalize heights before stacking
+        target_h = min(f.shape[0] for f in frames)
         resized = []
-        for f in valid:
+        for f in frames:
             h, w = f.shape[:2]
             if h != target_h:
-                scale = target_h / h
-                new_w = int(w * scale)
+                new_w = int(w * (target_h / h))
                 f = cv2.resize(f, (new_w, target_h), interpolation=cv2.INTER_AREA)
             resized.append(f)
 
