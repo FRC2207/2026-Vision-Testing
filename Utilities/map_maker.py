@@ -11,8 +11,8 @@ class FRCDataCollector:
         self.ax.set_title("L-Click: Add Ball | R-Click: Clear | Close: Save")
         
         # Lock ranges -50 to 50 and y to 0 to 100
-        self.ax.set_xlim(-50, 50)
-        self.ax.set_ylim(0, 100)
+        self.ax.set_xlim(0, 16)
+        self.ax.set_ylim(0, 8)
         self.ax.grid(True, linestyle='--', alpha=0.6)
         
         self.plot_handle, = self.ax.plot([], [], 'bo', markersize=8) # Current points

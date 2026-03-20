@@ -5,7 +5,7 @@ import json
 
 DEBUG_MODE = True
 APP_MODE = True
-USE_NETWORK_TABLES = False # Obvisouly shuold be set to true for game, but testing set to False
+USE_NETWORK_TABLES = True # Obvisouly shuold be set to true for game, but testing set to False
 
 #######################################################################
 # Custom PathPlanner Stuff
@@ -17,7 +17,7 @@ DISTANCE_THRESHOLD = 5
 
 # Fuel constants
 BALL_DIAMETER = 6
-UNIT = "inch"
+UNIT = "meter"
 
 # Field Constants
 MIN_X = 0
@@ -26,7 +26,7 @@ MIN_Y = 0
 MAX_Y = 690.88
 
 # DBSCAN Stuff
-ELIPSON = 20
+ELIPSON = 10
 MIN_SAMPLES = 1
 
 YOLO_INPUT_SIZE = 320
@@ -41,13 +41,18 @@ BALL_D_INCHES = 5.90551
 ##### FOR LENEVO LAPTOP #####
 # KNOWN_CALIBRATION_PIXEL_HEIGHT = 334
 ##### FOR MICROSOFT CINEMA WEBCAM #####
-KNOWN_CALIBRATION_PIXEL_HEIGHT = 292.8333333333333
+# KNOWN_CALIBRATION_PIXEL_HEIGHT = 292.8333333333333
+##### FOR THE CRAPPY MICROSOFT WEBCAM ######
+KNOWN_CALIBRATION_PIXEL_HEIGHT = 315 # Terrible mesearmenuts
 
 # YOLO_MODEL_FILE = "YoloModels/v8_or_v11/3.1-320x320/color-3.1-v11.onnx"
 YOLO_MODEL_FILE = "YoloModels/v26/nano/model.rknn"
+#YOLO_MODEL_FILE = "YoloModels/v26/nano/batchTesting/color-3.1-v26.rknn"
 GRAYSCALE = False
-# NETWORKTABLES_IP = "10.22.7.2" # Pretty sure this is right
-NETWORKTABLES_IP = "10.22.7.21"
+NETWORKTABLES_IP = "10.22.7.2" # Pretty sure this is right
+# NETWORKTABLES_IP = "10.22.7.21"
+# NETWORKTABLES_IP = "127.0.0.1"
+# NETWORKTABLES_IP = "10.22.7.22"
 
 with open("Simplified/camera_positions.json", "r") as file:
     data = json.load(file)

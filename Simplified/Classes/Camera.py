@@ -96,11 +96,12 @@ class Camera:
             # Assume it's a video file or webcam index
             self.is_image = False
             self.cap = cv2.VideoCapture(source)
-            self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+            self.cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'))
+            # self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
 
             if not self.cap.isOpened():
                 self.logger.error(f"Cannot open source {self.source}")
-                raise ValueError(f"Cannot open source {source}")
+                raise ValueError(f"Cannot open source {source}.")
 
         self.stopped = False
         # self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
@@ -141,7 +142,7 @@ class Camera:
                 self.frame_timestamp = time.perf_counter()
                 
             # self.frame = frame
-            time.sleep(0.01) # Help not overuse CPU
+            # time.sleep(0.01) # Help not overuse CPU
 
     def get_frame_age(self) -> float | None:
         with self.frame_lock:
@@ -156,8 +157,7 @@ class Camera:
             frame = self.image.copy()
         else:
             with self.frame_lock:
-                if self.frame is not None:
-                    frame = self.frame.copy()
+                frame = self.frame.copy()
         
         if frame is None:
             return None

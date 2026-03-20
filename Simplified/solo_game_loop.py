@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 
 # Camera class
 camera = Camera(
-    "/dev/video0",
+    "/dev/video1",
     # "Images/1.png",
     constants.CAMERA_FOV,
     constants.KNOWN_CALIBRATION_DISTANCE,
@@ -77,8 +77,15 @@ if __name__ == "__main__":
             fuel_positions_numpy_list = raw_fuel_positions
         except Exception as e:
             logger.warning(f"Warm-up run failed: {e}")
-            fuel_positions = []
+            fuel_positions_fuel_list = []
+            fuel_positions_numpy_list = np.empty((0, 2))
 
+        planner = PathPlanner(
+            fuel_positions_numpy_list,
+            constants.ELIPSON,
+            constants.MIN_SAMPLES,
+            constants.DEBUG_MODE
+        )
         fuel_tracker = FuelTracker(fuel_positions_fuel_list, constants.DISTANCE_THRESHOLD)
 
         # i = 0
@@ -128,9 +135,9 @@ if __name__ == "__main__":
                 # logger.info(f"Detected fuels: {len(fuel_positions)}")
                 pass
 
-            # _, fuel_positions = planner.update_fuel_positions(
-            #     fuel_positions_numpy_list
-            # )
+            _, fuel_positions = planner.update_fuel_positions(
+                fuel_positions_numpy_list
+            )
             network_start_time = time.perf_counter()
             if constants.USE_NETWORK_TABLES:
                 # network_handler.send_data(
@@ -138,7 +145,7 @@ if __name__ == "__main__":
                 # ) Old number array
 
                 network_handler.send_fuel_list(
-                    fuel_positions_fuel_list, "vision_data","VisionData"
+                    fuel_positions_fuel_list, "vision_data", "VisionData"
                 )
             network_s = time.perf_counter() - network_start_time
 

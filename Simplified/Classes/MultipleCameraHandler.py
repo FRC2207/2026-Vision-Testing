@@ -5,7 +5,6 @@ import logging
 
 
 class MultipleCameraHandler:
-    """Runs multiple cameras that share the same vision model (each Camera owns its own model instance)."""
     def __init__(self, cameras: list[Camera], vision_model_path: str):
         self.cameras = cameras
         self.logger = logging.getLogger(__name__)

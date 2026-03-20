@@ -132,6 +132,6 @@ class Metrics:
             template="plotly_dark",
         )
  
-        fig.write_html(self.output_file, include_plotlyjs="cdn")
+        fig.write_html(self.output_file, include_plotlyjs=True)
         self.logger.info(f"Metrics timeline saved to: {self.output_file}")
-        print(f"[Metrics] Timeline saved → {self.output_file}")
+        print(f"[Metrics] Timeline saved -> {self.output_file}")

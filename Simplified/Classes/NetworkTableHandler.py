@@ -30,7 +30,7 @@ class NetworkTableHandler:
 
         if i >= 15:
             self.logger.error(f"Network tables could not connect after 15 seconds")
-        
+
         self._subscribers = {}
         self._tables = {}
 

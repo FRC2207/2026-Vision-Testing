@@ -2,11 +2,7 @@ import numpy as np
 from .CustomDBScan import CustomDBScan
 
 class PathPlanner:
-    def __init__(self, fuel_positions, start_pos, elipson: int, min_samples: int, debug_mode: bool=False):
-        self.starting_pos = start_pos
-        self.visited = set()
-        self.path = [self.starting_pos]
-
+    def __init__(self, fuel_positions, elipson: int, min_samples: int, debug_mode: bool=False):
         # DBSCAN stuff
         self.elipson = elipson
         self.min_samples = min_samples
@@ -14,20 +10,20 @@ class PathPlanner:
         self.debug_mode = debug_mode
 
         # Call at end so everything is initialized before handling outliers and obstacles
-        self.fuel_positions, self.noise_positions = self.handle_outlier_points_and_obstacles(fuel_positions)
+        self.fuel_positions, self.noise_positions = self.dbscan(fuel_positions)
     
     def get_noise_positions(self):
         return self.noise_positions
     
     def update_fuel_positions(self, fuel_positions):
-        self.fuel_positions, self.noise_positions = self.handle_outlier_points_and_obstacles(fuel_positions)
+        self.fuel_positions, self.noise_positions = self.dbscan(fuel_positions)
 
         return self.noise_positions, self.fuel_positions
     
     def get_fuel_positions(self):
         return self.fuel_positions
 
-    def handle_outlier_points_and_obstacles(self, points: list) -> list:
+    def dbscan(self, points: list) -> list:
         if len(points) == 0:
             # No valid points
             self.noise_positions = np.empty((0, 2))
@@ -41,7 +37,7 @@ class PathPlanner:
         
         cleaned_points = points[non_noise_mask]
         if len(cleaned_points) == 0:
-            # All points are outliers, but no valid points after obstacle filtering
+            # All points are outliers, but no valid points after filtering
             self.noise_positions = np.array(points[outlier_mask])
             return cleaned_points, self.noise_positions
         else:
