@@ -82,6 +82,11 @@ class YoloWrapper:
                     f"Failed to initialize RKNN runtime for model: {self.model_file}"
                 )
 
+            # Pre-allocate the input buffer once so we dont malloc every frame
+            # input_size is (W, H) so flip it for the numpy shape
+            h, w = self.input_size[1], self.input_size[0]
+            self._input_buf = np.empty((1, h, w, 3), dtype=np.uint8)
+
         elif model_file.endswith(".onnx") or model_file.endswith(".pt") or model_file.endswith("openvino_model"):
             self.model_type = "yolo"
             self.model = YOLO(self.model_file, verbose=False, task="detect")
@@ -95,9 +100,9 @@ class YoloWrapper:
 
     def _preprocess_for_rknn(self, frame: np.ndarray) -> np.ndarray:
         img_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        img_letterboxed, _, _, _ = self._letterbox(img_rgb, self.input_size)
-        img_input = np.expand_dims(img_letterboxed, axis=0)  # (1, H, W, 3)
-        return np.ascontiguousarray(img_input, dtype=np.uint8)
+        # Write directly into the pre-allocated buffer instead of allocating a new one every frame
+        self._letterbox_into(img_rgb, self._input_buf[0], self.input_size)
+        return self._input_buf
 
     def _letterbox(self, img: np.ndarray, target_size: tuple) -> tuple:
         h, w = img.shape[:2]
@@ -118,6 +123,62 @@ class YoloWrapper:
         )
         return padded, scale, left, top
 
+    def _letterbox_into(self, img: np.ndarray, dst: np.ndarray, target_size: tuple) -> None:
+        # Same as _letterbox but writes into dst in-place instead of allocating a new array
+        # dst should be a (H, W, 3) uint8 buffer
+        h, w = img.shape[:2]
+        target_w, target_h = target_size
+        scale  = min(target_w / w, target_h / h)
+        new_w  = int(w * scale)
+        new_h  = int(h * scale)
+        pad_w  = target_w - new_w
+        pad_h  = target_h - new_h
+        top    = pad_h // 2
+        left   = pad_w // 2
+
+        resized = cv2.resize(img, (new_w, new_h))
+        dst[:] = 114  # fill padding color
+        dst[top:top + new_h, left:left + new_w] = resized
+
+    def _run_rknn(self, preprocessed: np.ndarray, orig_shape) -> "Results":
+        # Extracted so both predict() and predict_preprocessed() can share this without copy pasting
+        raw_outputs = self.model.inference(inputs=[preprocessed])
+
+        if raw_outputs is None:
+            self.logger.error(
+                f"RKNN inference returned None (frame shape={orig_shape}) — skipping."
+            )
+            return Results([], orig_shape)
+
+        output_tensor = raw_outputs[0] # keep batch dim for format detection
+
+        # Auto-detect output format on first successful inference
+        if self._output_fmt is None:
+            _, d1, d2 = output_tensor.shape
+            self._output_fmt = "end2end" if d2 == 6 else "no_nms"
+            self.logger.info(
+                f"Detected RKNN output format: {self._output_fmt}, "
+                f"shape={output_tensor.shape}, dtype={output_tensor.dtype}"
+            )
+
+        # Dequantize if needed
+        if output_tensor.dtype == np.int8:
+            output_tensor = output_tensor.astype(np.float32) / 128.0
+        elif output_tensor.dtype == np.uint8:
+            output_tensor = output_tensor.astype(np.float32) / 255.0
+
+        if self._output_fmt == "end2end":
+            return self._convert_rknn_end2end_outputs(output_tensor[0], orig_shape)
+        else:
+            return self._convert_rknn_outputs(output_tensor[0], orig_shape)
+
+    def predict_preprocessed(self, preprocessed: np.ndarray, orig_shape) -> "Results":
+        # Fast path used by Camera's pipeline thread — skips preproc since Camera
+        # already did it concurrently with the last inference
+        if self.model_type != "rknn":
+            raise RuntimeError("predict_preprocessed is only valid for RKNN models.")
+        return self._run_rknn(preprocessed, orig_shape)
+
     def predict(self, frame_or_frames, orig_shape=None) -> "Results | list[Results]":
         is_list = isinstance(frame_or_frames, list)
         frames = frame_or_frames if is_list else [frame_or_frames]
@@ -128,41 +189,7 @@ class YoloWrapper:
             for frame in frames:
                 target_shape = orig_shape if orig_shape is not None else frame.shape
                 preprocessed = self._preprocess_for_rknn(frame)
-
-                raw_outputs = self.model.inference(inputs=[preprocessed])
-
-                if raw_outputs is None:
-                    self.logger.error(
-                        f"RKNN inference returned None (frame shape={frame.shape}) — skipping."
-                    )
-                    results_list.append(Results([], target_shape))
-                    continue
-
-                output_tensor = raw_outputs[0] # keep batch dim for format detection
-
-                # Auto-detect output format on first successful inference
-                if self._output_fmt is None:
-                    _, d1, d2 = output_tensor.shape
-                    self._output_fmt = "end2end" if d2 == 6 else "no_nms"
-                    self.logger.info(
-                        f"Detected RKNN output format: {self._output_fmt}, "
-                        f"shape={output_tensor.shape}, dtype={output_tensor.dtype}"
-                    )
-
-                # Dequantize if needed
-                if output_tensor.dtype == np.int8:
-                    output_tensor = output_tensor.astype(np.float32) / 128.0
-                elif output_tensor.dtype == np.uint8:
-                    output_tensor = output_tensor.astype(np.float32) / 255.0
-
-                if self._output_fmt == "end2end":
-                    results_list.append(
-                        self._convert_rknn_end2end_outputs(output_tensor[0], target_shape)
-                    )
-                else:
-                    results_list.append(
-                        self._convert_rknn_outputs(output_tensor[0], target_shape)
-                    )
+                results_list.append(self._run_rknn(preprocessed, target_shape))
 
         else:  # For these ultralytics handles its own preprocessing
             for frame in frames:

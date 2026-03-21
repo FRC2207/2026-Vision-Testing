@@ -8,6 +8,7 @@ import logging
 import sys
 from scipy.spatial.transform import Rotation
 import threading
+import queue
 from .GenericYolo.genericYolo import Box, Results, YoloWrapper
 
 # Consider adding skipping stale frames
@@ -115,8 +116,17 @@ class Camera:
         self.model = YoloWrapper(self.yolo_model_file, self.input_size, quantized=self.quantized)
         
         self.frame_lock = threading.Lock()
+
+        # Preprocessing pipeline queue — holds (preprocessed_buf, orig_frame, orig_shape)
+        # maxsize=1 so if inference is slow, the old stale frame gets evicted and
+        # replaced with the latest one rather than building up a backlog
+        self._preproc_q: queue.Queue = queue.Queue(maxsize=1)
+        self._use_pipeline = (not self.is_image) and (self.model.model_type == "rknn")
+
         if not self.is_image:
             threading.Thread(target=self._reader, daemon=True).start()
+            if self._use_pipeline:
+                threading.Thread(target=self._preprocess_worker, daemon=True).start()
 
     def _reader(self):
         # self.logger.info(f"self.stopped: {self.stopped}")
@@ -143,6 +153,62 @@ class Camera:
                 
             # self.frame = frame
             # time.sleep(0.01) # Help not overuse CPU
+
+    def _preprocess_worker(self):
+        # Runs concurrently with RKNN inference so preproc time is basically free
+        # Grabs latest raw frame, preprocesses it, and puts it in _preproc_q
+        # If inference hasn't consumed the previous item yet we evict it so the
+        # queue always has the freshest frame and doesn't build up lag
+        last_ts = None
+
+        # Own buffer for this thread so it can write while inference reads from the previous one
+        h, w = self.input_size[1], self.input_size[0]
+        local_buf = np.empty((1, h, w, 3), dtype=np.uint8)
+
+        while not self.stopped:
+            with self.frame_lock:
+                frame = self.frame
+                ts    = self.frame_timestamp
+
+            if frame is None or ts == last_ts:
+                # No new frame yet
+                time.sleep(0.0005)
+                continue
+
+            last_ts    = ts
+            frame_copy = frame.copy()  # own copy so _reader can keep writing
+            orig_shape = frame_copy.shape
+
+            # Preprocess into thread-local buffer
+            img_rgb = cv2.cvtColor(frame_copy, cv2.COLOR_BGR2RGB)
+            self._letterbox_into(img_rgb, local_buf[0], self.input_size)
+
+            # Copy so we can safely reuse local_buf next iteration
+            preprocessed = local_buf.copy()
+
+            # Evict stale item if inference hasn't caught up
+            try:
+                self._preproc_q.get_nowait()
+            except queue.Empty:
+                pass
+
+            self._preproc_q.put((preprocessed, frame_copy, orig_shape))
+
+    def _letterbox_into(self, img, dst, target_size):
+        # Letterbox img into dst in-place, no allocation
+        h, w = img.shape[:2]
+        target_w, target_h = target_size
+        scale  = min(target_w / w, target_h / h)
+        new_w  = int(w * scale)
+        new_h  = int(h * scale)
+        pad_w  = target_w - new_w
+        pad_h  = target_h - new_h
+        top    = pad_h // 2
+        left   = pad_w // 2
+
+        resized = cv2.resize(img, (new_w, new_h))
+        dst[:] = 114
+        dst[top:top + new_h, left:left + new_w] = resized
 
     def get_frame_age(self) -> float | None:
         with self.frame_lock:
@@ -227,21 +293,32 @@ class Camera:
         return self._pixel_to_robot_coordinates(cx, cy, distance_los, img_w, img_h)
 
     def get_yolo_data(self):
-        # self.logger.info("Calling: self.get_frame()")
-        frame = self.get_frame(preprocessed=False)
+        if self._use_pipeline:
+            # Fast path: preproc thread already did the cvtColor + letterbox
+            # concurrently with the last inference, so we just grab and go
+            try:
+                preprocessed, orig_frame, orig_shape = self._preproc_q.get(timeout=0.15)
+            except queue.Empty:
+                self.logger.warning("Preproc pipeline timed out — no frame available.")
+                return None, None
 
-        if frame is None:
-            self.logger.warning("Frame not retrieved properly from camera (frame was None)")
-            return None, None
+            results       = self.model.predict_preprocessed(preprocessed, orig_shape)
+            annotated_frame = orig_frame
+        else:
+            # self.logger.info("Calling: self.get_frame()")
+            frame = self.get_frame(preprocessed=False)
 
-        results = self.model.predict(frame, orig_shape=frame.shape)
+            if frame is None:
+                self.logger.warning("Frame not retrieved properly from camera (frame was None)")
+                return None, None
 
-        annotated_frame = frame.copy()
+            results = self.model.predict(frame, orig_shape=frame.shape)
+            annotated_frame = frame.copy()
 
         # Show it with cv2
         if self.debug_mode:
             self.logger.info("Plotting frame")
-            annotated_frame = results.plot(frame)
+            annotated_frame = results.plot(annotated_frame.copy())
             new_time_frame = time.perf_counter()
             fps = 1 / (new_time_frame - self.last_time)
             self.last_time = new_time_frame

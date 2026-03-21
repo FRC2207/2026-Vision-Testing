@@ -1,11 +1,11 @@
 {
     "cameras": [
         {
-            "x": -14,
-            "y": 0,
+            "x": -3,
+            "y": -9,
             "height": 2,
             "downward_pitch": 0,
-            "robot_relative_yaw": 270
+            "robot_relative_yaw": 180
         }
     ]
 }

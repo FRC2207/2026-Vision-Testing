@@ -85,13 +85,13 @@ if __name__ == "__main__":
     balls = [make_ball(f.get_position()[0], f.get_position()[1]) for f in initial_fuel]
     original_layout = [(f.get_position()[0], f.get_position()[1]) for f in initial_fuel]
 
-    # robots = [
-    #     make_robot(1.0,           1.0),
-    #     make_robot(FIELD_X - 1.0, 1.0),
-    #     make_robot(1.0,           FIELD_Y - 1.0),
-    #     make_robot(FIELD_X - 1.0, FIELD_Y - 1.0),
-    # ]
-    robots = []
+    robots = [
+        make_robot(1.0,           1.0),
+        make_robot(FIELD_X - 1.0, 1.0),
+        make_robot(1.0,           FIELD_Y - 1.0),
+        make_robot(FIELD_X - 1.0, FIELD_Y - 1.0),
+    ]
+    # robots = []
 
     raw_fuel_positions = fuel_list_to_numpy(initial_fuel)
     planner = PathPlanner(
@@ -147,14 +147,14 @@ if __name__ == "__main__":
                 balls.append(make_ball(x, y))
 
         space.step(dt)
-        fuel_positions_fuel_list = [Fuel(float(b.position.x), float(b.position.y)) for b in balls]
-        # fuel_positions_fuel_list = [
-        #     Fuel(
-        #         float(b.position.x) + random.gauss(0, 0.03),
-        #         float(b.position.y) + random.gauss(0, 0.03)
-        #     )
-        #     for b in balls
-        # ]
+        # fuel_positions_fuel_list = [Fuel(float(b.position.x), float(b.position.y)) for b in balls]
+        fuel_positions_fuel_list = [
+            Fuel(
+                float(b.position.x) + random.gauss(0, 0.03),
+                float(b.position.y) + random.gauss(0, 0.03)
+            )
+            for b in balls
+        ]
 
         fuel_tracker.set_fuel_list(fuel_positions_fuel_list)
         fuel_tracker.sort()

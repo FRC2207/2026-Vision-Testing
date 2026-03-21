@@ -25,8 +25,6 @@ def run_detection(video_source: int, model_file_path: str):
                 source=frame,
                 stream=True,
                 imgsz=320,
-                vid_stride=3,
-                agnostic_nms=True,
                 verbose=False
             )
             for r in results:
@@ -43,9 +41,9 @@ def run_detection(video_source: int, model_file_path: str):
 
             cv2.putText(frame, fps_text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
 
-            cv2.namedWindow('Random Yolo Vision Thingie', cv2.WINDOW_NORMAL)
+            cv2.namedWindow('Random Yolo Vision Thingie')
 
-            cv2.resizeWindow('Random Yolo Vision Thingie', 600, 600)
+            # cv2.resizeWindow('Random Yolo Vision Thingie', 600, 600)
             cv2.imshow("Random Yolo Vision Thingie", frame)
 
         key = cv2.waitKey(25) & 0xFF
@@ -56,4 +54,4 @@ def run_detection(video_source: int, model_file_path: str):
     cv2.destroyAllWindows()
 
 if __name__ == "__main__":
-    run_detection("Images/PXL_20260228_155842030.mp4", fr"YoloModels\v26\nano\clean\color-3.1-v26_openvino_model")
+    run_detection(1, fr"YoloModels\v26\nano\color-3.1-v26_openvino_model")
