@@ -12,6 +12,7 @@ from Classes.FuelTracker import FuelTracker
 from Classes.MultipleCameraHandler import MultipleCameraHandler
 from Classes.Metrics import Metrics
 import signal
+from rknnlite.api import RKNNLite # No error handling let it error out :)
 
 shutdown_event = threading.Event()
 signal.signal(signal.SIGINT,  lambda sig, frame: shutdown_event.set())
