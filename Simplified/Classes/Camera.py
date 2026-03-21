@@ -175,20 +175,19 @@ class Camera:
                 continue
 
             last_ts    = ts
+            if not self._preproc_q.empty():
+                continue
+
+            # No frame.copy() needed — _reader replaces self.frame with a new object
+            # each write, so our local reference stays valid after releasing the lock
             orig_shape = frame.shape
 
             # Preprocess into current buffer
             img_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             self._letterbox_into(img_rgb, bufs[buf_idx][0], self.input_size)
 
-            # Remove stale item if inference hasn't caught up
-            try:
-                self._preproc_q.get_nowait()
-            except queue.Empty:
-                pass
-
             self._preproc_q.put((bufs[buf_idx], frame, orig_shape))
-            buf_idx = 1 - buf_idx  # flip
+            buf_idx = 1 - buf_idx
 
     def _letterbox_into(self, img, dst, target_size):
         # Letterbox img into dst in-place, no allocation

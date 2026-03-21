@@ -85,3 +85,10 @@ Learning all this readme.md formatting was actually kinda fund for some reason
 |Yolov8 |nano  |~20-30   |~30-50         |
 |Yolov8 |small |~40-60   |~15-25         |
 |Yolov5 |nano  |~15-25   |~40-60         |
+
+## Commands
+- "sudo systemctl restart vision.service" - Restart the vision process.
+- "tmux attach -t vision" - Attach to vision tmux process.
+- "git pull" - Pull github code.
+- "git reset --hard HEAD" - Reset code to head, used for undoing local changes.
+- "git clean -fd" - Removed untracked git files.
