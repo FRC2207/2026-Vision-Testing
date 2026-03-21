@@ -10,7 +10,7 @@ from scipy.spatial.transform import Rotation
 import threading
 import queue
 from .GenericYolo.genericYolo import Box, Results, YoloWrapper
-
+from rknnlite.api import RKNNLite # No error handling :)
 # Consider adding skipping stale frames
 
 class Camera:
