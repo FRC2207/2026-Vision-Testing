@@ -103,6 +103,8 @@ class Camera:
             if not self.cap.isOpened():
                 self.logger.error(f"Cannot open source {self.source}")
                 raise ValueError(f"Cannot open source {source}.")
+            
+            self.cap.set(cv2.CAP_PROP_FPS, 60)
 
         self.stopped = False
         # self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
@@ -143,7 +145,8 @@ class Camera:
                 frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
                 frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)  # Restore 3 channels, it wil still be gray tho
 
-            if np.mean(frame) < 1: 
+            # if np.mean(frame) < 1: // To computationally heavy 
+            if frame.max() < 1:
                 self.logger.debug("Frame is a solid color, skipping...")
                 continue
 
@@ -155,15 +158,11 @@ class Camera:
             # time.sleep(0.01) # Help not overuse CPU
 
     def _preprocess_worker(self):
-        # Runs concurrently with RKNN inference so preproc time is basically free
-        # Grabs latest raw frame, preprocesses it, and puts it in _preproc_q
-        # If inference hasn't consumed the previous item yet we evict it so the
-        # queue always has the freshest frame and doesn't build up lag
         last_ts = None
 
-        # Own buffer for this thread so it can write while inference reads from the previous one
         h, w = self.input_size[1], self.input_size[0]
-        local_buf = np.empty((1, h, w, 3), dtype=np.uint8)
+        bufs = [np.empty((1, h, w, 3), dtype=np.uint8), np.empty((1, h, w, 3), dtype=np.uint8)]
+        buf_idx = 0
 
         while not self.stopped:
             with self.frame_lock:
@@ -176,23 +175,20 @@ class Camera:
                 continue
 
             last_ts    = ts
-            frame_copy = frame.copy()  # own copy so _reader can keep writing
-            orig_shape = frame_copy.shape
+            orig_shape = frame.shape
 
-            # Preprocess into thread-local buffer
-            img_rgb = cv2.cvtColor(frame_copy, cv2.COLOR_BGR2RGB)
-            self._letterbox_into(img_rgb, local_buf[0], self.input_size)
+            # Preprocess into current buffer
+            img_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            self._letterbox_into(img_rgb, bufs[buf_idx][0], self.input_size)
 
-            # Copy so we can safely reuse local_buf next iteration
-            preprocessed = local_buf.copy()
-
-            # Evict stale item if inference hasn't caught up
+            # Remove stale item if inference hasn't caught up
             try:
                 self._preproc_q.get_nowait()
             except queue.Empty:
                 pass
 
-            self._preproc_q.put((preprocessed, frame_copy, orig_shape))
+            self._preproc_q.put((bufs[buf_idx], frame, orig_shape))
+            buf_idx = 1 - buf_idx  # flip
 
     def _letterbox_into(self, img, dst, target_size):
         # Letterbox img into dst in-place, no allocation
