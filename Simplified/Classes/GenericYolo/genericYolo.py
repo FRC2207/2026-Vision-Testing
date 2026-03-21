@@ -33,9 +33,10 @@ class Results:
         return s
     
 class YoloWrapper:
-    def __init__(self, model_file: str, input_size=(640, 640), quantized: bool=False):
+    def __init__(self, model_file: str, core_mask, input_size=(640, 640), quantized: bool=False, ):
         self.model_file = model_file
         self.input_size = input_size
+        self.core_mask = core_mask
         self.model_type = None
         self.logger = logging.getLogger(__name__)
 
@@ -72,7 +73,7 @@ class YoloWrapper:
             #     raise ValueError(f"Failed to build RKNN model: {self.model_file}")
 
             # Initialize the RKNN runtime on NPU 0
-            ret = self.model.init_runtime(core_mask=RKNNLite.NPU_CORE_0_1_2)
+            ret = self.model.init_runtime(core_mask=core_mask)
             # core_mask=RKNNLite.NPU_CORE_0_1_2 use for all NPU usage
             if ret != 0:
                 self.logger.error(

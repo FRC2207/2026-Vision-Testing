@@ -44,7 +44,9 @@ class Camera:
         subsystem: str = "field",
         input_size: tuple[int, int]=(640, 640),
         quantized: bool=True,
-        unit: str="inch"
+        unit: str="inch",
+        core_mask=RKNNLite.NPU_CORE_0_1_2,
+        fps_cap: int=50
     ):
         self.source = source
         self.camera_fov = camera_fov
@@ -57,6 +59,7 @@ class Camera:
         self.grayscale = grayscale
         self.yolo_model_file = yolo_model_file
         self.input_size = input_size
+        self.fps_cap = fps_cap
 
         self.quantized = quantized
         self.unit = unit
@@ -70,6 +73,8 @@ class Camera:
 
         self.debug_mode = debug_mode
         self.ball_count = 0
+
+        self.core_mask = core_mask
 
         self.gui_available = False
         self.logger = logging.getLogger(__name__)
@@ -104,7 +109,7 @@ class Camera:
                 self.logger.error(f"Cannot open source {self.source}")
                 raise ValueError(f"Cannot open source {source}.")
             
-            self.cap.set(cv2.CAP_PROP_FPS, 60)
+            self.cap.set(cv2.CAP_PROP_FPS, self.fps_cap)
 
         self.stopped = False
         # self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
@@ -115,7 +120,7 @@ class Camera:
             self.known_calibration_pixel_height * self.known_calibration_distance
         ) / self.ball_d_inches
 
-        self.model = YoloWrapper(self.yolo_model_file, self.input_size, quantized=self.quantized)
+        self.model = YoloWrapper(self.yolo_model_file, self.core_mask, self.input_size, quantized=self.quantized)
         
         self.frame_lock = threading.Lock()
 

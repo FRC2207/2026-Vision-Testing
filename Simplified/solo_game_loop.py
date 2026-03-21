@@ -48,7 +48,8 @@ camera = Camera(
     subsystem="field",
     input_size=(constants.YOLO_INPUT_SIZE, constants.YOLO_INPUT_SIZE),
     quantized=True,
-    unit=constants.UNIT
+    unit=constants.UNIT,
+    fps_cap=50
 )
 
 metrics = Metrics()
