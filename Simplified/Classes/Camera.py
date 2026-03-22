@@ -83,6 +83,7 @@ class Camera:
         self.frame_timestamp = None
         self._last_result = None
         self._last_frame  = None
+        self._fresh_frame = False
 
         self.conversions = {
             "meter": 0.0254,
@@ -304,6 +305,7 @@ class Camera:
             except queue.Empty:
                 # Nothing new ready yet, return last known good result
                 if self._last_result is not None:
+                    self._fresh_frame = False
                     return self._last_result, self._last_frame
                 # First ever call and nothing ready — do one blocking wait with short timeout
                 try:
@@ -312,10 +314,11 @@ class Camera:
                     self.logger.warning("Preproc pipeline timed out on first call.")
                     return None, None
 
-            results       = self.model.predict_preprocessed(preprocessed, orig_shape)
+            results = self.model.predict_preprocessed(preprocessed, orig_shape)
             annotated_frame = orig_frame
             self._last_result = results
             self._last_frame  = annotated_frame
+            self._fresh_frame = True
         else:
             # self.logger.info("Calling: self.get_frame()")
             frame = self.get_frame(preprocessed=False)
@@ -328,7 +331,7 @@ class Camera:
             annotated_frame = frame.copy()
 
         # Show it with cv2
-        if self.debug_mode:
+        if self.debug_mode and self._fresh_frame:
             self.logger.info("Plotting frame")
             annotated_frame = results.plot(annotated_frame.copy())
             new_time_frame = time.perf_counter()
@@ -347,7 +350,7 @@ class Camera:
                 2,
                 cv2.LINE_AA,
             )
-
+            self._last_frame = annotated_frame
             if self.gui_available:
                 cv2.imshow("YOLO Detections", annotated_frame)
                 cv2.waitKey(1)

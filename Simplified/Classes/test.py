@@ -127,7 +127,8 @@ class Camera:
         # Cache last good result so get_yolo_data never blocks or returns None just because
         # the preproc worker hasnt finished the next frame yet
         self._last_result = None
-        self._last_frame  = None  # signals preproc worker that a new frame is ready
+        self._last_frame  = None
+        self._fresh_frame = False  # signals preproc worker that a new frame is ready
 
         # Preprocessing pipeline queue — holds (preprocessed_buf, orig_frame, orig_shape)
         # maxsize=1 so if inference is slow, the old stale frame gets evicted and
@@ -310,6 +311,7 @@ class Camera:
             except queue.Empty:
                 # Nothing new ready yet, return last known good result
                 if self._last_result is not None:
+                    self._fresh_frame = False
                     return self._last_result, self._last_frame
                 # First ever call and nothing ready — do one blocking wait with short timeout
                 try:
@@ -318,10 +320,11 @@ class Camera:
                     self.logger.warning("Preproc pipeline timed out on first call.")
                     return None, None
 
-            results       = self.model.predict_preprocessed(preprocessed, orig_shape)
-            annotated_frame = orig_frame
+            results         = self.model.predict_preprocessed(preprocessed, orig_shape)
+            annotated_frame  = orig_frame
             self._last_result = results
             self._last_frame  = annotated_frame
+            self._fresh_frame = True  # flag so debug annotation knows this is a real new frame
         else:
             # self.logger.info("Calling: self.get_frame()")
             frame = self.get_frame(preprocessed=False)
@@ -334,7 +337,10 @@ class Camera:
             annotated_frame = frame.copy()
 
         # Show it with cv2
-        if self.debug_mode:
+        if self.debug_mode and self._fresh_frame:
+            # Only annotate on real new frames — if we annotated on cache hits too,
+            # last_time would get updated every loop and the FPS calc would be wrong,
+            # causing the FPS text to flicker wildly on the flask stream
             self.logger.info("Plotting frame")
             annotated_frame = results.plot(annotated_frame.copy())
             new_time_frame = time.perf_counter()
@@ -353,6 +359,7 @@ class Camera:
                 2,
                 cv2.LINE_AA,
             )
+            self._last_frame = annotated_frame  # update cache with annotated version
 
             if self.gui_available:
                 cv2.imshow("YOLO Detections", annotated_frame)
