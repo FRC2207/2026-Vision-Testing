@@ -131,7 +131,7 @@ if __name__ == "__main__":
                     flask_s=flask_s,
                 )
                 metrics.tick()
-                print(f"\rFPS: {loop_s * 1000:.3f}      ", end="")
+                print(f"\rFPS: {1/loop_s:.1f}      ", end="")
                 continue
             else:
                 # logger.info(f"Detected fuels: {len(fuel_positions)}")
@@ -166,8 +166,8 @@ if __name__ == "__main__":
                 network_s=network_s
             )
             metrics.tick()
-            logger.info(f"FPS: {loop_s * 1000:.3f}")
-            print(f"\rFPS: {loop_s * 1000:.3f}      ", end="")
+            logger.info(f"FPS: {1/loop_s:.1f}")
+            print(f"\rFPS: {1/loop_s:.1f}      ", end="")
     finally:
         camera.destroy()
         metrics.destroy()
