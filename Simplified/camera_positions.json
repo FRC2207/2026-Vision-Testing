@@ -1,6 +1,6 @@
 {
-    "cameras": [
-        {
+    "cameras": {
+        "Arducam": {
             "name": "Arducam",
             "x": 0,
             "y": 0,
@@ -16,7 +16,7 @@
                 "fov": 0
             }
         },
-        {
+        "Microsoft Cinema": {
             "name": "Microsoft Cinema",
             "x": 0,
             "y": 0,
@@ -32,7 +32,7 @@
                 "fov": 74.9
             }
         },
-        {
+        "Leveno Laptop": {
             "name": "Leveno Laptop",
             "x": 0,
             "y": 0,
@@ -48,7 +48,7 @@
                 "fov": 74.9
             }
         },
-        {
+        "Crappy Microsoft Webcam": {
             "name": "Crappy Microsoft Webcam",
             "x": 0,
             "y": 0,
@@ -64,5 +64,5 @@
                 "fov": 74.9
             }
         }
-    ]
+    }
 }
