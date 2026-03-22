@@ -81,6 +81,9 @@ class Camera:
         self.logger.info(f"Camera object created with: {self.__dict__}")
 
         self.frame_timestamp = None
+        self._last_result = None
+        self._last_frame  = None
+        self._fresh_frame = False
 
         self.conversions = {
             "meter": 0.0254,
@@ -124,12 +127,6 @@ class Camera:
         
         self.frame_lock = threading.Lock()
         self._frame_event = threading.Event()  # signals preproc worker that a new frame is ready
-        self._fresh_frame = False
-
-        self._result_lock   = threading.Lock()
-        self._latest_result = None
-        self._latest_frame  = None
-        self._latest_fresh  = False
 
         # Preprocessing pipeline queue — holds (preprocessed_buf, orig_frame, orig_shape)
         # maxsize=1 so if inference is slow, the old stale frame gets evicted and
@@ -141,22 +138,7 @@ class Camera:
             threading.Thread(target=self._reader, daemon=True).start()
             if self._use_pipeline:
                 threading.Thread(target=self._preprocess_worker, daemon=True).start()
-                threading.Thread(target=self._inference_worker, daemon=True).start()
 
-    def _inference_worker(self):
-        while not self.stopped:
-            try:
-                preprocessed, orig_frame, orig_shape = self._preproc_q.get(timeout=0.05)
-            except queue.Empty:
-                continue
-
-            results = self.model.predict_preprocessed(preprocessed, orig_shape)
-
-            with self._result_lock:
-                self._latest_result = results
-                self._latest_frame  = orig_frame
-                self._latest_fresh  = True
-    
     def _reader(self):
         # self.logger.info(f"self.stopped: {self.stopped}")
         while not self.stopped:
@@ -318,15 +300,25 @@ class Camera:
 
     def get_yolo_data(self):
         if self._use_pipeline:
-            with self._result_lock:
-                results         = self._latest_result
-                annotated_frame = self._latest_frame
-                self._fresh_frame = self._latest_fresh
-                self._latest_fresh = False # consume the fresh flag
+            try:
+                preprocessed, orig_frame, orig_shape = self._preproc_q.get_nowait()
+            except queue.Empty:
+                # Nothing new ready yet, return last known good result
+                if self._last_result is not None:
+                    self._fresh_frame = False
+                    return self._last_result, self._last_frame
+                # First ever call and nothing ready — do one blocking wait with short timeout
+                try:
+                    preprocessed, orig_frame, orig_shape = self._preproc_q.get(timeout=0.1)
+                except queue.Empty:
+                    self.logger.warning("Preproc pipeline timed out on first call.")
+                    return None, None
 
-            if results is None:
-                # Stilll warming up, nothing inferred yet
-                return None, None
+            results = self.model.predict_preprocessed(preprocessed, orig_shape)
+            annotated_frame = orig_frame
+            self._last_result = results
+            self._last_frame  = annotated_frame
+            self._fresh_frame = True
         else:
             # self.logger.info("Calling: self.get_frame()")
             frame = self.get_frame(preprocessed=False)
