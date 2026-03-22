@@ -46,7 +46,6 @@ camera0 = Camera(
     input_size=(constants.YOLO_INPUT_SIZE, constants.YOLO_INPUT_SIZE),
     quantized=True,
     unit=constants.UNIT,
-    core_mask=RKNNLite.NPU_CORE_0_1,
     fps_cap=50
 )
 
@@ -68,7 +67,6 @@ camera1 = Camera(
     input_size=(constants.YOLO_INPUT_SIZE, constants.YOLO_INPUT_SIZE),
     quantized=True,
     unit=constants.UNIT,
-    core_mask=RKNNLite.NPU_CORE_1_2,
     fps_cap=30
 )
 
