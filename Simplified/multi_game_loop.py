@@ -50,7 +50,7 @@ camera0 = Camera(
 )
 
 camera1 = Camera(
-    "/dev/video1",
+    "/dev/video2",
     constants.CAMERA_FOV,
     constants.KNOWN_CALIBRATION_DISTANCE,
     constants.BALL_D_INCHES,
