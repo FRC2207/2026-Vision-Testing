@@ -127,8 +127,7 @@ if __name__ == "__main__":
                 print(f"\rFPS: {1/loop_s:.3f}      ", end="")
                 continue
 
-            for position in fuel_list:
-                print(position)
+            print(len(fuel_list))
 
             network_s = None
             if constants.USE_NETWORK_TABLES:

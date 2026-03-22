@@ -12,14 +12,22 @@ class FuelTracker:
         return self.fuel_list
 
     def _deduplicate(self, fuels: list[Fuel]) -> list[Fuel]:
-        unique = []
+        groups = []
         for fuel in fuels:
-            if not any(
-                np.linalg.norm(fuel.get_position() - kept.get_position()) <= self.distance_threshold
-                for kept in unique
-            ):
-                unique.append(fuel)
-        return unique
+            for group in groups:
+                if np.linalg.norm(fuel.get_position() - group[0].get_position()) <= self.distance_threshold:
+                    group.append(fuel)
+                    break
+            else:
+                groups.append([fuel])
+
+        merged = []
+        for group in groups:
+            avg_pos = np.mean([f.get_position() for f in group], axis=0)
+            group[0].set_position(avg_pos)
+            merged.append(group[0])
+
+        return merged
 
     def _sort(self):
         self.fuel_list.sort(key=lambda fuel: np.linalg.norm(fuel.get_position()))
