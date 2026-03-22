@@ -14,6 +14,7 @@ from Classes.Metrics import Metrics
 import signal
 from rknnlite.api import RKNNLite # No error handling let it error out :)
 import cv2
+import sys
 
 shutdown_event = threading.Event()
 signal.signal(signal.SIGINT,  lambda sig, frame: shutdown_event.set())
@@ -24,11 +25,15 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     filemode="w",
     filename="log.txt",
+    handlers=[
+        logging.FileHandler("log.txt", mode="w"),
+        # logging.StreamHandler(sys.stdout) # Also print to console
+    ]
 )
-logging.getLogger('rknn').setLevel(logging.WARNING)
 
 logger = logging.getLogger(__name__)
 
+logger.info(f"Creating camera objects...")
 camera0 = Camera(
     "/dev/video0",
     constants.CAMERA_FOV,
@@ -72,7 +77,9 @@ camera1 = Camera(
     core_mask=RKNNLite.NPU_CORE_2,
     fps_cap=30
 )
+logger.info("Success!")
 
+logger.info("Creating metrics, camera app, camera handler, and network table handlers...")
 metrics = Metrics()
 
 if constants.APP_MODE:
@@ -84,12 +91,15 @@ camera_handler = MultipleCameraHandler([camera0, camera1], constants.YOLO_MODEL_
 if constants.USE_NETWORK_TABLES:
     network_handler = NetworkTableHandler(constants.NETWORKTABLES_IP)
 
+logger.info("Success!")
+
 def numpy_to_fuel_list(fuel_positions: np.ndarray) -> list[Fuel]:
     return [Fuel(p[0], p[1]) for p in fuel_positions]
 
 if __name__ == "__main__":
     try:
-        logger.info("Starting simplified, multi-camera loop.")
+        logger.info("Starting simplified, multi-camera loop...")
+        logger.info("Warming up...")
 
         try:
             raw_fuel_positions = camera_handler.predict()
@@ -99,6 +109,7 @@ if __name__ == "__main__":
             fuel_positions_fuel_list = []
 
         fuel_tracker = FuelTracker(fuel_positions_fuel_list, constants.DISTANCE_THRESHOLD)
+        logger.info("Warmed up.")
 
         while not shutdown_event.is_set():
             start_time = time.perf_counter()

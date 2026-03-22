@@ -222,7 +222,7 @@ class Camera:
         with self.frame_lock:
             ts = self.frame_timestamp
         if ts is None:
-            return None
+            return 0.0
         return time.perf_counter() - ts
 
     def get_frame(self, preprocessed=False):
