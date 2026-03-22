@@ -127,10 +127,6 @@ if __name__ == "__main__":
                 print(f"\rFPS: {1/loop_s:.3f}      ", end="")
                 continue
 
-            print(len(fuel_list))
-            for fuel in fuel_list:
-                print(f"Fuel at ({fuel.x:.1f}, {fuel.y:.1f}) {constants.UNIT}")
-
             network_s = None
             if constants.USE_NETWORK_TABLES:
                 network_start = time.perf_counter()

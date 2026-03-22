@@ -82,9 +82,13 @@ class Camera:
         # Unit conversion dict
         self.conversions = {
             "meter": 0.0254,
+            "meters": 0.0254,
             "inch": 1.0,
+            "inches": 1.0,
             "foot": 1 / 12,
-            "cm": 2.54,
+            "feet": 1 / 12,
+            "centimeter": 2.54,
+            "centimeters": 2.54,
         }
 
         # Yolo/RKNN vision stuff

@@ -23,12 +23,12 @@ else:
     NETWORKTABLES_IP = ""
 
 # Fuel constants
-UNIT = "inch"
+UNIT = "meter"
 
 # Cleaning Up Fuel DEtections Stuff
 ELIPSON = 10
 MIN_SAMPLES = 1
-DISTANCE_THRESHOLD = 50
+DISTANCE_THRESHOLD = 0.127 # 5 inches
 
 YOLO_INPUT_SIZE = 320
 YOLO_MODEL_FILE = "YoloModels/v26/nano/model.rknn"
