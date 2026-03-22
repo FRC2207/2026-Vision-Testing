@@ -49,7 +49,7 @@ class MultipleCameraHandler:
 
         return np.vstack(all_positions) if all_positions else np.empty((0, 2))
 
-    def get_combined_frame(self):
+    def get_combined_frame(self, display_width=640):
         frames = []
         for i, cam in enumerate(self.cameras):
             with self._locks[i]:
@@ -62,17 +62,25 @@ class MultipleCameraHandler:
         if not frames:
             return None
         if len(frames) == 1:
-            return frames[0]
+            f = frames[0]
+        else:
+            # Normalize heights
+            target_h = min(f.shape[0] for f in frames)
+            resized = []
+            for f in frames:
+                h, w = f.shape[:2]
+                if h != target_h:
+                    new_w = int(w * (target_h / h))
+                    f = cv2.resize(f, (new_w, target_h), interpolation=cv2.INTER_AREA)
+                resized.append(f)
+            f = np.hstack(resized)
 
-        target_h = min(f.shape[0] for f in frames)
-        resized = []
-        for f in frames:
-            h, w = f.shape[:2]
-            if h != target_h:
-                new_w = int(w * (target_h / h))
-                f = cv2.resize(f, (new_w, target_h), interpolation=cv2.INTER_AREA)
-            resized.append(f)
-        return np.hstack(resized)
+        # Downscale for display no need to stream full resolution to Flask
+        h, w = f.shape[:2]
+        if w > display_width:
+            scale = display_width / w
+            f = cv2.resize(f, (display_width, int(h * scale)), interpolation=cv2.INTER_AREA)
+        return f
 
     def destroy(self):
         self._stopped = True
