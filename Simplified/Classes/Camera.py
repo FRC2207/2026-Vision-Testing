@@ -187,6 +187,8 @@ class Camera:
 
             last_ts = ts
             if not self._preproc_q.empty():
+                self._frame_event.wait(timeout=0.02)
+                self._frame_event.clear()
                 continue
 
             # No frame.copy() needed — _reader replaces self.frame with a new object
@@ -329,6 +331,7 @@ class Camera:
 
             results = self.model.predict(frame, orig_shape=frame.shape)
             annotated_frame = frame.copy()
+            self._fresh_frame = True
 
         # Show it with cv2
         if self.debug_mode and self._fresh_frame:
@@ -399,26 +402,6 @@ class Camera:
                 self.logger.info("Skipping detection due to illegal shape.")
 
         return np.array(map_points) if map_points else np.empty((0, 2)), frame
-
-    def calculate_from_mosaic(self, local_x, local_y, local_w, local_h):
-        img_w = self.cap.get(cv2.CAP_PROP_FRAME_WIDTH) or 640
-        img_h = self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT) or 480
-        
-        scale_x = img_w / 320.0
-        scale_y = img_h / 320.0
-        
-        native_cx = local_x * scale_x
-        native_cy = local_y * scale_y
-        native_avg_px = ((local_w * scale_x) + (local_h * scale_y)) / 2.0
-        
-        if native_avg_px <= 0:
-            return None
-
-        distance_los = (self.ball_d_inches * self.focal_length_pixels) / native_avg_px
-
-        return self._pixel_to_robot_coordinates(
-            native_cx, native_cy, distance_los, int(img_w), int(img_h)
-        )
 
     def get_subsystem(self):
         return self.subsystem

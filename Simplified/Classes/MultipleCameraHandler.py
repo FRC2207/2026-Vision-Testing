@@ -27,7 +27,7 @@ class MultipleCameraHandler:
             for i, cam in enumerate(self.cameras)
         }
 
-        for future in concurrent.futures.as_completed(futures, timeout=0.04): # 40ms max wait
+        for future in concurrent.futures.as_completed(futures, timeout=0.15): # .15s max wait
             try:
                 i, positions, annotated = future.result()
                 self._annotated_frames[i] = annotated
