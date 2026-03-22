@@ -51,7 +51,7 @@ class Camera:
             self.fps_cap = camera_config["fps_cap"]
 
             # Focal length calc's (short for calculations)
-            if camera_config["focal_length_pixels"] == None:
+            if camera_config.get("focal_length_pixels") is None:
                 self.focal_length_pixels = (
                     self.known_calibration_pixel_height
                     * self.known_calibration_distance
