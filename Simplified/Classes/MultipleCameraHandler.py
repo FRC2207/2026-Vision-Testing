@@ -2,6 +2,7 @@ from Classes.Camera import Camera
 import cv2
 import numpy as np
 import logging
+import concurrent.futures
 
 
 class MultipleCameraHandler:
@@ -11,16 +12,30 @@ class MultipleCameraHandler:
         self.vision_model_path = vision_model_path
         self._annotated_frames: list = [None] * len(cameras)
 
+        self._executor = concurrent.futures.ThreadPoolExecutor(max_workers=len(cameras))
+
+    def _run_camera(self, args):
+        i, camera = args
+        positions, annotated = camera.run()
+        return i, positions, annotated
+
     def predict(self) -> np.ndarray:
         all_positions = []
-        for i, camera in enumerate(self.cameras):
+        
+        futures = {
+            self._executor.submit(self._run_camera, (i, cam)): i
+            for i, cam in enumerate(self.cameras)
+        }
+
+        for future in concurrent.futures.as_completed(futures):
             try:
-                positions, annotated = camera.run()
+                i, positions, annotated = future.result()
                 self._annotated_frames[i] = annotated
                 if positions is not None and len(positions) > 0:
                     all_positions.append(positions)
             except Exception as e:
-                self.logger.warning(f"Camera {camera.source} failed during predict: {e}")
+                i = futures[future]
+                self.logger.warning(f"Camera {self.cameras[i].source} failed during predict: {e}")
                 self._annotated_frames[i] = None
 
         if all_positions:
@@ -54,5 +69,6 @@ class MultipleCameraHandler:
         return np.hstack(resized)
 
     def destroy(self):
+        self._executor.shutdown(wait=False)
         for cam in self.cameras:
             cam.destroy()
