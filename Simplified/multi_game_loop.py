@@ -136,7 +136,6 @@ if __name__ == "__main__":
                     vision_s=vision_s,
                     camera_lag_s=camera_lag_s,
                     flask_s=flask_s,
-                    network_s=network_s
                 )
                 metrics.tick()
                 logger.info(f"FPS: {1/loop_s:.1f}")
