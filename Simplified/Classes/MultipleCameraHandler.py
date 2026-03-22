@@ -3,7 +3,7 @@ import cv2
 import numpy as np
 import logging
 import concurrent.futures
-
+import time
 
 class MultipleCameraHandler:
     def __init__(self, cameras: list[Camera], vision_model_path: str):
@@ -16,16 +16,20 @@ class MultipleCameraHandler:
 
     def _run_camera(self, args):
         i, camera = args
+        t0 = time.perf_counter()
         positions, annotated = camera.run()
+        print(f"  cam{i} took {time.perf_counter()-t0:.3f}s")
         return i, positions, annotated
 
     def predict(self) -> np.ndarray:
         all_positions = []
-        
+
+        t0 = time.perf_counter()
         futures = {
             self._executor.submit(self._run_camera, (i, cam)): i
             for i, cam in enumerate(self.cameras)
         }
+        t1 = time.perf_counter()
 
         for future in concurrent.futures.as_completed(futures):
             try:
@@ -35,12 +39,11 @@ class MultipleCameraHandler:
                     all_positions.append(positions)
             except Exception as e:
                 i = futures[future]
-                self.logger.warning(f"Camera {self.cameras[i].source} failed during predict: {e}")
+                self.logger.warning(f"Camera {self.cameras[i].source} failed: {e}")
                 self._annotated_frames[i] = None
 
-        if all_positions:
-            return np.vstack(all_positions)
-        return np.empty((0, 2))
+        t2 = time.perf_counter()
+        print(f"  submit={t1-t0:.3f}s  wait={t2-t1:.3f}s  total={t2-t0:.3f}s")
 
     def get_combined_frame(self):
         frames = []
