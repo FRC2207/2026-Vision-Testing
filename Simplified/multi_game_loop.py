@@ -132,6 +132,7 @@ if __name__ == "__main__":
                 loop_s = time.perf_counter() - start_time
                 metrics.record(loop_s=loop_s, vision_s=vision_s, flask_s=flask_s)
                 metrics.tick()
+                print(f"\rFPS: {loop_s * 1000:.3f}      ", end="")
                 continue
 
             network_s = None
@@ -150,7 +151,7 @@ if __name__ == "__main__":
                 network_s=network_s,
             )
             metrics.tick()
-
+            print(f"\rFPS: {loop_s * 1000:.3f}      ", end="")
     finally:
         camera_handler.destroy()
         metrics.destroy()
