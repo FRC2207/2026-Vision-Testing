@@ -1,53 +1,48 @@
-from Classes.Camera import Camera
-import cv2
-import numpy as np
-import logging
-import concurrent.futures
-
-
 class MultipleCameraHandler:
     def __init__(self, cameras: list[Camera], vision_model_path: str):
         self.cameras = cameras
         self.logger = logging.getLogger(__name__)
-        self.vision_model_path = vision_model_path
         self._annotated_frames: list = [None] * len(cameras)
+        self._latest_positions: list = [np.empty((0, 2))] * len(cameras)
+        self._locks = [threading.Lock() for _ in cameras]
+        self._stopped = False
 
-        self._executor = concurrent.futures.ThreadPoolExecutor(max_workers=len(cameras))
+        # Each camera gets its own persistent worker thread
+        for i, cam in enumerate(cameras):
+            threading.Thread(
+                target=self._camera_loop,
+                args=(i, cam),
+                daemon=True
+            ).start()
 
-    def _run_camera(self, args):
-        i, camera = args
-        positions, annotated = camera.run()
-        return i, positions, annotated
+    def _camera_loop(self, i: int, camera: Camera):
+        while not self._stopped:
+            try:
+                positions, annotated = camera.run()
+                with self._locks[i]:
+                    self._latest_positions[i] = positions if positions is not None else np.empty((0, 2))
+                    self._annotated_frames[i] = annotated
+            except Exception as e:
+                self.logger.warning(f"Camera {camera.source} error: {e}")
 
     def predict(self) -> np.ndarray:
+        # Non-blocking — just reads latest cached results
         all_positions = []
-        
-        futures = {
-            self._executor.submit(self._run_camera, (i, cam)): i
-            for i, cam in enumerate(self.cameras)
-        }
+        for i in range(len(self.cameras)):
+            with self._locks[i]:
+                pos = self._latest_positions[i]
+            if pos is not None and len(pos) > 0:
+                all_positions.append(pos)
 
-        for future in concurrent.futures.as_completed(futures, timeout=0.15): # .15s max wait
-            try:
-                i, positions, annotated = future.result()
-                self._annotated_frames[i] = annotated
-                if positions is not None and len(positions) > 0:
-                    all_positions.append(positions)
-            except Exception as e:
-                i = futures[future]
-                self.logger.warning(f"Camera {self.cameras[i].source} failed during predict: {e}")
-                self._annotated_frames[i] = None
-
-        if all_positions:
-            return np.vstack(all_positions)
-        return np.empty((0, 2))
+        return np.vstack(all_positions) if all_positions else np.empty((0, 2))
 
     def get_combined_frame(self):
         frames = []
         for i, cam in enumerate(self.cameras):
-            f = self._annotated_frames[i]
+            with self._locks[i]:
+                f = self._annotated_frames[i]
             if f is None:
-                f = cam.get_frame()  # fallback to raw
+                f = cam.get_frame()
             if f is not None:
                 frames.append(f)
 
@@ -56,7 +51,6 @@ class MultipleCameraHandler:
         if len(frames) == 1:
             return frames[0]
 
-        # Normalize heights before stacking
         target_h = min(f.shape[0] for f in frames)
         resized = []
         for f in frames:
@@ -65,10 +59,9 @@ class MultipleCameraHandler:
                 new_w = int(w * (target_h / h))
                 f = cv2.resize(f, (new_w, target_h), interpolation=cv2.INTER_AREA)
             resized.append(f)
-
         return np.hstack(resized)
 
     def destroy(self):
-        self._executor.shutdown(wait=False)
+        self._stopped = True
         for cam in self.cameras:
             cam.destroy()
