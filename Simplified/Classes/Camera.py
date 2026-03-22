@@ -133,8 +133,8 @@ class Camera:
 
             self.cap.set(cv2.CAP_PROP_FPS, self.fps_cap)
 
-        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 320)
-        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 320)
+            self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 320)
+            self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 320)
         # time.sleep(0.5)
 
         self.model = YoloWrapper(
@@ -247,7 +247,7 @@ class Camera:
             frame = self.image.copy()
         else:
             with self.frame_lock:
-                frame = self.frame.copy()
+                frame = self.frame.copy() if self.frame is not None else None
 
         if frame is None:
             return None
