@@ -2,48 +2,27 @@ from .Fuel import Fuel
 import numpy as np
 
 class FuelTracker:
-    def __init__(self, fuel_list: list[Fuel], distance_threshold: int=5):
-        self.fuel_list = fuel_list
-        self.distance_threshold = distance_threshold # The amount of error in inches allowed for a fuel to keep the id
+    def __init__(self, fuel_list: list[Fuel] = None, distance_threshold: int = 5):
+        self.fuel_list = fuel_list or []
+        self.distance_threshold = distance_threshold  # Min distance inches to treat two detections as distinct fuels
 
-        self.init()
+    def update(self, new_fuel_list: list[Fuel]) -> list[Fuel]:
+        self.fuel_list = self._deduplicate(new_fuel_list)
+        self._sort()
+        return self.fuel_list
 
-    def init(self):
-        for i, fuel in enumerate(self.fuel_list):
-            fuel.set_id(i)
+    def _deduplicate(self, fuels: list[Fuel]) -> list[Fuel]:
+        unique = []
+        for fuel in fuels:
+            if not any(
+                np.linalg.norm(fuel.get_position() - kept.get_position()) <= self.distance_threshold
+                for kept in unique
+            ):
+                unique.append(fuel)
+        return unique
 
-    def get_highest_id(self):
-        highest = float("-inf")
+    def _sort(self):
+        self.fuel_list.sort(key=lambda fuel: np.linalg.norm(fuel.get_position()))
 
-        for fuel in self.fuel_list:
-            if fuel.get_id() > highest:
-                highest = fuel.get_id()
-
-        return highest
-    
     def get_fuel_list(self) -> list[Fuel]:
         return self.fuel_list
-
-    def update(self, new_fuel_list: list[Fuel]):
-        for new_fuel in new_fuel_list:
-            found_match = False
-            for fuel in self.fuel_list:
-                distance = np.linalg.norm(new_fuel.get_position() - fuel.get_position())
-                if distance <= self.distance_threshold:
-                    new_fuel.set_id(fuel.get_id())
-                    found_match = True
-                    break
-            
-            if not found_match:
-                new_fuel.set_id(self.get_highest_id() + 1)
-                self.fuel_list.append(new_fuel)
-        
-        return self.fuel_list
-
-    def set_fuel_list(self, fuels: list[Fuel]):
-        self.fuel_list = fuels
-
-    def sort(self):
-        self.fuel_list.sort(
-            key=lambda fuel: np.linalg.norm(fuel.get_position() - np.array([0, 0])) # Cause its robot relative
-        )
