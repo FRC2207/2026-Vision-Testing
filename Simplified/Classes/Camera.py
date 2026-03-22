@@ -37,6 +37,7 @@ class Camera:
         unit: str = "inch",
         core_mask=RKNNLite.NPU_CORE_0_1_2,
     ):
+        self.logger = logging.getLogger(__name__)
         self.source = source
 
         # Camera calibration stuff
@@ -97,7 +98,6 @@ class Camera:
         self.debug_mode = debug_mode
         self.subsystem = subsystem
 
-        self.logger = logging.getLogger(__name__)
         # self.logger.info(f"Camera object created with: {self.__dict__}")
 
         # Setups the buffering/timing stuff and some scripted values
