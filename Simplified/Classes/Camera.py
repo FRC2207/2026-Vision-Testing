@@ -296,18 +296,12 @@ class Camera:
     def get_yolo_data(self):
         if self._use_pipeline:
             try:
-                preprocessed, orig_frame, orig_shape = self._preproc_q.get_nowait()
+                preprocessed, orig_frame, orig_shape = self._preproc_q.get(timeout=0.033)  # ~30fps min
             except queue.Empty:
-                # Nothing new ready yet, return last known good result
                 if self._last_result is not None:
                     self._fresh_frame = False
                     return self._last_result, self._last_frame
-                # First ever call and nothing ready — do one blocking wait with short timeout
-                try:
-                    preprocessed, orig_frame, orig_shape = self._preproc_q.get(timeout=0.1)
-                except queue.Empty:
-                    self.logger.warning("Preproc pipeline timed out on first call.")
-                    return None, None
+                return None, None
 
             results = self.model.predict_preprocessed(preprocessed, orig_shape)
             annotated_frame = orig_frame
