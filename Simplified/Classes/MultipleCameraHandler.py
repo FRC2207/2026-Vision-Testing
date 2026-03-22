@@ -2,42 +2,49 @@ from Classes.Camera import Camera
 import cv2
 import numpy as np
 import logging
-import concurrent.futures
 import threading
 
 class MultipleCameraHandler:
-    def __init__(self, cameras, vision_model_path):
+    def __init__(self, cameras: list[Camera], vision_model_path: str):
         self.cameras = cameras
         self.logger = logging.getLogger(__name__)
-        self._annotated_frames = [None] * len(cameras)
-        self._latest_positions = [np.empty((0, 2))] * len(cameras)
-        self._locks = [threading.Lock() for _ in cameras]
-        self._new_data_event = threading.Event()  # ← fires when ANY camera finishes
         self._stopped = False
 
-        for i, cam in enumerate(cameras):
-            threading.Thread(target=self._camera_loop, args=(i, cam), daemon=True).start()
+        # Per-camera state — each camera has its own lock and "fresh data" event
+        self._positions  = [np.empty((0, 2))] * len(cameras)
+        self._frames     = [None] * len(cameras)
+        self._locks      = [threading.Lock() for _ in cameras]
+        self._fresh      = [threading.Event() for _ in cameras]
 
-    def _camera_loop(self, i, camera):
+        for i, cam in enumerate(cameras):
+            threading.Thread(
+                target=self._camera_loop,
+                args=(i, cam),
+                daemon=True
+            ).start()
+
+    def _camera_loop(self, i: int, camera: Camera):
         while not self._stopped:
             try:
-                positions, annotated = camera.run()
+                positions, frame = camera.run()
                 with self._locks[i]:
-                    self._latest_positions[i] = positions if positions is not None else np.empty((0, 2))
-                    self._annotated_frames[i] = annotated
-                self._new_data_event.set()  # ← wake up predict()
+                    self._positions[i] = positions if positions is not None else np.empty((0, 2))
+                    self._frames[i]    = frame
+                self._fresh[i].set()  # signal: this camera has new data
             except Exception as e:
                 self.logger.warning(f"Camera {camera.source} error: {e}")
 
     def predict(self) -> np.ndarray:
-        self._new_data_event.wait(timeout=0.1)  # ← blocks until a camera finishes
-        self._new_data_event.clear()
+        # Wait for every camera to produce one fresh frame since last call
+        for event in self._fresh:
+            event.wait(timeout=0.2)  # 200ms max — if camera dies, don't hang forever
+            event.clear()
 
         all_positions = []
         for i in range(len(self.cameras)):
             with self._locks[i]:
-                pos = self._latest_positions[i]
-            if pos is not None and len(pos) > 0:
+                pos = self._positions[i].copy()
+            if len(pos) > 0:
                 all_positions.append(pos)
 
         return np.vstack(all_positions) if all_positions else np.empty((0, 2))
@@ -46,11 +53,11 @@ class MultipleCameraHandler:
         frames = []
         for i, cam in enumerate(self.cameras):
             with self._locks[i]:
-                f = self._annotated_frames[i]
+                f = self._frames[i]
             if f is None:
                 f = cam.get_frame()
             if f is not None:
-                frames.append(f)
+                frames.append(f.copy())
 
         if not frames:
             return None
