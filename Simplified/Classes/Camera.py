@@ -106,7 +106,7 @@ class Camera:
             self.is_image = False
             self.cap = cv2.VideoCapture(source)
             self.cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'))
-            # self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+            self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
 
             if not self.cap.isOpened():
                 self.logger.error(f"Cannot open source {self.source}")
@@ -150,9 +150,6 @@ class Camera:
                 # raise ValueError(f"Failed to retrieve frame from: {self.source}")
                 time.sleep(0.05)
                 continue
-            if self.grayscale:
-                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-                frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)  # Restore 3 channels, it wil still be gray tho
 
             # if np.mean(frame) < 1: // To computationally heavy 
             if frame.max() < 1:
@@ -165,11 +162,10 @@ class Camera:
             self._frame_event.set()  # wake up preproc worker immediately instead of making it poll
                 
             # self.frame = frame
-            # time.sleep(0.01) # Help not overuse CPU
+            time.sleep(0.002) # Help not overuse CPU
 
     def _preprocess_worker(self):
         last_ts = None
-
         h, w = self.input_size[1], self.input_size[0]
         bufs = [np.empty((1, h, w, 3), dtype=np.uint8), np.empty((1, h, w, 3), dtype=np.uint8)]
         buf_idx = 0
@@ -177,33 +173,30 @@ class Camera:
         while not self.stopped:
             with self.frame_lock:
                 frame = self.frame
-                ts    = self.frame_timestamp
+                ts = self.frame_timestamp
 
             if frame is None or ts == last_ts:
-                # No new frame yet
                 self._frame_event.wait(timeout=0.05)
                 self._frame_event.clear()
                 continue
 
-            last_ts = ts
             if not self._preproc_q.empty():
-                self._frame_event.wait(timeout=0.02)
-                self._frame_event.clear()
+                time.sleep(0.005)
                 continue
 
-            # No frame.copy() needed — _reader replaces self.frame with a new object
-            # each write, so our local reference stays valid after releasing the lock
+            last_ts = ts
             orig_shape = frame.shape
 
-            # Preprocess into current buffer
             img_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            self._letterbox_into(img_rgb, bufs[buf_idx][0], self.input_size)
+            if self.grayscale:
+                gray = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2GRAY)
+                img_rgb = cv2.cvtColor(gray, cv2.COLOR_GRAY2RGB)
 
+            self._letterbox_into(img_rgb, bufs[buf_idx][0], self.input_size)
             self._preproc_q.put((bufs[buf_idx], frame, orig_shape))
             buf_idx = 1 - buf_idx
 
     def _letterbox_into(self, img, dst, target_size):
-        # Letterbox img into dst in-place, no allocation
         h, w = img.shape[:2]
         target_w, target_h = target_size
         scale  = min(target_w / w, target_h / h)
