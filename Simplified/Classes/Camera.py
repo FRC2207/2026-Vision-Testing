@@ -52,10 +52,19 @@ class Camera:
 
             # Focal length calc's (short for calculations)
             if camera_config.get("focal_length_pixels") is None:
-                self.focal_length_pixels = (
-                    self.known_calibration_pixel_height
-                    * self.known_calibration_distance
-                ) / self.ball_d_inches
+                try:
+                    self.logger.info(
+                        "No focal length in config, calculating from calibration data..."
+                    )
+                    self.focal_length_pixels = (
+                        self.known_calibration_pixel_height
+                        * self.known_calibration_distance
+                    ) / self.ball_d_inches
+                except ZeroDivisionError:
+                    self.logger.warning(
+                        "Calibration game piece size is zero, cannot calculate focal length. Defaulting to 1."
+                    )
+                    self.focal_length_pixels = 1.0
             else:
                 self.focal_length_pixels = camera_config["focal_length_pixels"]
 
