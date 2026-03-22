@@ -124,12 +124,15 @@ class Camera:
         
         self.frame_lock = threading.Lock()
         self._frame_event = threading.Event()  # signals preproc worker that a new frame is ready
+        # _last_result/_last_frame replaced by _latest_result/_latest_frame under _result_lock
         self._fresh_frame = False
 
+        # Latest inference result — written by _inference_worker, read by get_yolo_data()
+        # main loop never waits for inference, it just reads whatever is freshest here
         self._result_lock   = threading.Lock()
         self._latest_result = None
         self._latest_frame  = None
-        self._latest_fresh  = False
+        self._latest_fresh  = False  # signals preproc worker that a new frame is ready
 
         # Preprocessing pipeline queue — holds (preprocessed_buf, orig_frame, orig_shape)
         # maxsize=1 so if inference is slow, the old stale frame gets evicted and
@@ -143,20 +146,6 @@ class Camera:
                 threading.Thread(target=self._preprocess_worker, daemon=True).start()
                 threading.Thread(target=self._inference_worker, daemon=True).start()
 
-    def _inference_worker(self):
-        while not self.stopped:
-            try:
-                preprocessed, orig_frame, orig_shape = self._preproc_q.get(timeout=0.05)
-            except queue.Empty:
-                continue
-
-            results = self.model.predict_preprocessed(preprocessed, orig_shape)
-
-            with self._result_lock:
-                self._latest_result = results
-                self._latest_frame  = orig_frame
-                self._latest_fresh  = True
-    
     def _reader(self):
         # self.logger.info(f"self.stopped: {self.stopped}")
         while not self.stopped:
@@ -198,12 +187,13 @@ class Camera:
                 ts    = self.frame_timestamp
 
             if frame is None or ts == last_ts:
-                # No new frame yet
+                # No new frame yet — wait for _reader to signal one instead of busy-polling
+                # This means we wake up instantly when a frame arrives instead of up to 0.5ms late
                 self._frame_event.wait(timeout=0.05)
                 self._frame_event.clear()
                 continue
 
-            last_ts = ts
+            last_ts    = ts
             if not self._preproc_q.empty():
                 continue
 
@@ -217,6 +207,24 @@ class Camera:
 
             self._preproc_q.put((bufs[buf_idx], frame, orig_shape))
             buf_idx = 1 - buf_idx
+
+    def _inference_worker(self):
+        # Pulls preprocessed frames from _preproc_q and runs NPU inference.
+        # Runs in its own thread so the main loop never waits on inference —
+        # it just reads _latest_result whenever it wants, completely decoupled
+        # from how long the NPU takes. This is what kills the jitter.
+        while not self.stopped:
+            try:
+                preprocessed, orig_frame, orig_shape = self._preproc_q.get(timeout=0.05)
+            except queue.Empty:
+                continue
+
+            results = self.model.predict_preprocessed(preprocessed, orig_shape)
+
+            with self._result_lock:
+                self._latest_result = results
+                self._latest_frame  = orig_frame
+                self._latest_fresh  = True
 
     def _letterbox_into(self, img, dst, target_size):
         # Letterbox img into dst in-place, no allocation
@@ -318,14 +326,17 @@ class Camera:
 
     def get_yolo_data(self):
         if self._use_pipeline:
+            # Just read the latest result from the inference worker — never blocks,
+            # never waits on the NPU. If nothing is ready yet, return None and let
+            # the caller handle it (first-call warmup case).
             with self._result_lock:
                 results         = self._latest_result
                 annotated_frame = self._latest_frame
                 self._fresh_frame = self._latest_fresh
-                self._latest_fresh = False # consume the fresh flag
+                self._latest_fresh = False  # consume the fresh flag
 
             if results is None:
-                # Stilll warming up, nothing inferred yet
+                # Still warming up, nothing inferred yet
                 return None, None
         else:
             # self.logger.info("Calling: self.get_frame()")
@@ -340,6 +351,9 @@ class Camera:
 
         # Show it with cv2
         if self.debug_mode and self._fresh_frame:
+            # Only annotate on real new frames — if we annotated on cache hits too,
+            # last_time would get updated every loop and the FPS calc would be wrong,
+            # causing the FPS text to flicker wildly on the flask stream
             self.logger.info("Plotting frame")
             annotated_frame = results.plot(annotated_frame.copy())
             new_time_frame = time.perf_counter()
@@ -358,7 +372,8 @@ class Camera:
                 2,
                 cv2.LINE_AA,
             )
-            self._last_frame = annotated_frame
+            self._last_frame = annotated_frame  # update cache with annotated version
+
             if self.gui_available:
                 cv2.imshow("YOLO Detections", annotated_frame)
                 cv2.waitKey(1)
