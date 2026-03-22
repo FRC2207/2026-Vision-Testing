@@ -15,7 +15,7 @@ elif MODE == "test":
     DEBUG_MODE = True
     APP_MODE = True
     USE_NETWORK_TABLES = True
-    NETWORKTABLES_IP = "127.0.0.1"
+    NETWORKTABLES_IP = "192.168.1.166"
 else:
     DEBUG_MODE = True
     APP_MODE = True
