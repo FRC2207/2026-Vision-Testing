@@ -13,6 +13,7 @@ from Classes.MultipleCameraHandler import MultipleCameraHandler
 from Classes.Metrics import Metrics
 import signal
 from rknnlite.api import RKNNLite # No error handling let it error out :)
+import cv2
 
 shutdown_event = threading.Event()
 signal.signal(signal.SIGINT,  lambda sig, frame: shutdown_event.set())
@@ -70,6 +71,13 @@ camera1 = Camera(
     core_mask=RKNNLite.NPU_CORE_2,
     fps_cap=30
 )
+
+print(f"cam0 fourcc: {int(camera0.cap.get(cv2.CAP_PROP_FOURCC)).to_bytes(4, 'little')}")
+print(f"cam0 fps: {camera0.cap.get(cv2.CAP_PROP_FPS)}")
+print(f"cam0 res: {camera0.cap.get(cv2.CAP_PROP_FRAME_WIDTH)}x{camera0.cap.get(cv2.CAP_PROP_FRAME_HEIGHT)}")
+print(f"cam1 fourcc: {int(camera1.cap.get(cv2.CAP_PROP_FOURCC)).to_bytes(4, 'little')}")
+print(f"cam1 fps: {camera1.cap.get(cv2.CAP_PROP_FPS)}")
+print(f"cam1 res: {camera1.cap.get(cv2.CAP_PROP_FRAME_WIDTH)}x{camera1.cap.get(cv2.CAP_PROP_FRAME_HEIGHT)}")
 
 metrics = Metrics()
 
