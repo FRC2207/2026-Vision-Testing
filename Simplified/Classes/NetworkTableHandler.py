@@ -38,37 +38,6 @@ class NetworkTableHandler:
         if table_name not in self._tables:
             self._tables[table_name] = self.inst.getTable(table_name)
         return self._tables[table_name]
-
-    def send_data(self, data, data_name: str, table_name: str):
-        try:
-            if not self.inst.isConnected():
-                return
-
-            table = self._get_table(table_name)
-            
-            if isinstance(data, list) and len(data) > 0 and isinstance(data[0], Fuel):
-                positions = [f.get_position_normally() for f in data]
-                table.putNumberArray(f"{data_name}_X", [float(p[0]) for p in positions])
-                table.putNumberArray(f"{data_name}_Y", [float(p[1]) for p in positions])
-            elif isinstance(data, Fuel):
-                table.putNumberArray(f"{data_name}_X", data.get_position_normally()[0])
-                table.putNumberArray(f"{data_name}_Y", data.get_position_normally()[1])
-            elif isinstance(data, (int, float)):
-                table.putNumber(data_name, float(data))
-            elif isinstance(data, str):
-                table.putString(data_name, data)
-            elif isinstance(data, bool):
-                table.putBoolean(data_name, data)
-            else:
-                self.logger.warning("The data type is not recognized, not sending data")
-                
-            self.inst.flush()
-        except Exception as e:
-            self.logger.error(f"Could not send data to network tables {self.ip}.")
-            return
-        
-        self.logger.info(f"Data sent to network tables {self.ip}")
-        return
     
     def send_fuel_list(self, fuels: list[Fuel], data_name: str="fuel_data", table_name: str="VisionData"):
         try:
@@ -87,6 +56,7 @@ class NetworkTableHandler:
                 self._subscribers[pub_key] = table.getStructArrayTopic(data_name, FuelStruct).publish()
             
             self._subscribers[pub_key].set(struct_list)
+            table.putNumber("timestamp_ms", time.time() * 1000)
             self.inst.flush()
             
             self.logger.info(f"Sent {len(struct_list)} fuels via StructArray")

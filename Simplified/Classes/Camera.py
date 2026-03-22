@@ -114,6 +114,7 @@ class Camera:
         self.frame = None
         self.gui_available = False  # Figure out how to dynamically figure this out
         self.last_time = time.perf_counter()
+        self.frame_timeout = 1.0 / max(self.fps_cap, 1)
 
         # The stuff below this handles all the camera/photo buffering, timing stuff thats really complex and hard to explain
         if isinstance(source, str) and source.lower().endswith(
@@ -187,7 +188,7 @@ class Camera:
             self._frame_event.set()  # wake up preproc worker immediately instead of making it poll
 
             # self.frame = frame
-            time.sleep(0.002)  # Help not overuse CPU
+            # time.sleep(0.002)  # Help not overuse CPU
 
     def _preprocess_worker(self):
         last_ts = None
@@ -306,7 +307,8 @@ class Camera:
         if box.conf < self.min_confidence:
             # self.logger.info("Skipping detection due to low confidence.")
             return False
-        if x1 < self.margin or y1 < self.margin or x2 > (img_w - self.margin):
+        # if x1 < self.margin or y1 < self.margin or x2 > (img_w - self.margin):
+        if x1 < self.margin or y1 < self.margin or x2 > (img_w - self.margin) or y2 > (img_h - self.margin):
             # self.logger.info("Skipping detection due to margin.")
             return False
         if h_px == 0:
@@ -334,9 +336,7 @@ class Camera:
     def get_yolo_data(self):
         if self._use_pipeline:
             try:
-                preprocessed, orig_frame, orig_shape = self._preproc_q.get(
-                    timeout=0.033
-                )  # ~30fps min
+                preprocessed, orig_frame, orig_shape = self._preproc_q.get(timeout=self.frame_timeout)
             except queue.Empty:
                 if self._last_result is not None:
                     self._fresh_frame = False
@@ -445,33 +445,36 @@ class Camera:
     ) -> np.ndarray | None:
         # I have no clue if this math is actually right, but the tests say yes
         # Its partly vibe coded but I reviewed it but also im failing my precalc class so idk
-
         pixel_offset_x = pixel_x - (img_w / 2.0)
         horizontal_angle_rad = math.atan(pixel_offset_x / self.focal_length_pixels)
 
-        if self.camera_height > 0 and distance_los > self.camera_height:
-            true_horizontal_distance = math.sqrt(
-                distance_los**2 - self.camera_height**2
+        # Apply pitch correction properly
+        pitch_rad = math.radians(self.camera_pitch_angle)
+        if self.camera_height > 0:
+            # Use pitch to find true ground distance
+            angle_to_ground = math.asin(
+                min(1.0, self.camera_height / max(distance_los, 1e-6))
+            ) - pitch_rad
+            true_horizontal_distance = self.camera_height / math.tan(
+                max(angle_to_ground, 1e-6)
             )
         else:
-            true_horizontal_distance = distance_los
+            true_horizontal_distance = distance_los * math.cos(pitch_rad)
 
         left_right_distance = true_horizontal_distance * math.sin(horizontal_angle_rad)
-        forward_distance = true_horizontal_distance * math.cos(horizontal_angle_rad)
+        forward_distance    = true_horizontal_distance * math.cos(horizontal_angle_rad)
 
         yaw_rad = math.radians(self.camera_bot_relative_yaw)
         cos_yaw = math.cos(yaw_rad)
         sin_yaw = math.sin(yaw_rad)
 
-        x_rotated = forward_distance * sin_yaw + left_right_distance * cos_yaw
-        y_rotated = forward_distance * cos_yaw - left_right_distance * sin_yaw
+        x_rotated = forward_distance * cos_yaw + left_right_distance * sin_yaw
+        y_rotated = forward_distance * sin_yaw - left_right_distance * cos_yaw
 
-        scale = self.conversions.get(self.unit, 0.0254)
-        if scale is None:
-            self.logger.warning(
-                f"Unknown unit: {self.unit}. Expected: {list(self.conversions.keys())}"
-            )
-            self.unit = "inch"
+        if self.unit not in self.conversions:
+            self.logger.warning(f"Unknown unit: {self.unit}, defaulting to meter")
+            self.unit = "meter"
+        scale = self.conversions[self.unit]
 
         x_out = (x_rotated + self.camera_x) * scale
         y_out = (y_rotated + self.camera_y) * scale

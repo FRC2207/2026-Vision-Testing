@@ -1,7 +1,7 @@
 import numpy as np
 import json
 
-MODE = "debug"
+MODE = "test"
 # "game" for game
 # "test" for testing with robot or sim (change network tables IP)
 # "debug" for home stuff

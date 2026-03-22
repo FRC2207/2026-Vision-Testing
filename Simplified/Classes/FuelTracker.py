@@ -1,36 +1,33 @@
 from .Fuel import Fuel
+from .CustomDBScan import CustomDBScan
 import numpy as np
 
 class FuelTracker:
-    def __init__(self, fuel_list: list[Fuel] = None, distance_threshold: int = 5):
+    def __init__(self, fuel_list: list[Fuel] = None, distance_threshold: float = 0.127):
         self.fuel_list = fuel_list or []
-        self.distance_threshold = distance_threshold  # Min distance inches to treat two detections as distinct fuels
+        self.distance_threshold = distance_threshold
 
     def update(self, new_fuel_list: list[Fuel]) -> list[Fuel]:
         self.fuel_list = self._deduplicate(new_fuel_list)
-        self._sort()
         return self.fuel_list
-
     def _deduplicate(self, fuels: list[Fuel]) -> list[Fuel]:
-        groups = []
-        for fuel in fuels:
-            for group in groups:
-                if np.linalg.norm(fuel.get_position() - group[0].get_position()) <= self.distance_threshold:
-                    group.append(fuel)
-                    break
-            else:
-                groups.append([fuel])
+        if not fuels:
+            return []
 
-        merged = []
-        for group in groups:
-            avg_pos = np.mean([f.get_position() for f in group], axis=0)
-            group[0].position = avg_pos 
-            merged.append(group[0])
+        positions = np.array([f.get_position() for f in fuels])
 
-        return merged
+        scanner = CustomDBScan(positions, eps=self.distance_threshold, samples=1)
+        labels = scanner.get_dbscan()
 
-    def _sort(self):
-        self.fuel_list.sort(key=lambda fuel: np.linalg.norm(fuel.get_position()))
+        # Merge each cluster into its centroid
+        merged = {}
+        for label, pos in zip(labels, positions):
+            merged.setdefault(label, []).append(pos)
+
+        return [
+            Fuel(*np.mean(g, axis=0).tolist())
+            for g in merged.values()
+        ]
 
     def get_fuel_list(self) -> list[Fuel]:
         return self.fuel_list

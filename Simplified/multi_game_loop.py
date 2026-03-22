@@ -90,8 +90,9 @@ if __name__ == "__main__":
 
         while not shutdown_event.is_set():
             start_time = time.perf_counter()
-            camera_lag_s = (camera0.get_frame_age() + camera1.get_frame_age()) / 2
-
+            ages = [cam.get_frame_age() for cam in camera_handler.cameras]
+            camera_lag_s = sum(ages) / len(ages) if ages else 0.0
+            
             vision_start = time.perf_counter()
             try:
                 raw_fuel_positions = camera_handler.predict()
