@@ -1,6 +1,22 @@
 {
     "cameras": [
         {
+            "name": "Arducam",
+            "x": 0,
+            "y": 0,
+            "height": 0,
+            "pitch": 0,
+            "yaw": 0,
+            "grayscale": "false",
+            "fps_cap": 30,
+            "calibration": {
+                "size": 0,
+                "distance": 0,
+                "game_piece_size": 0,
+                "fov": 0
+            }
+        },
+        {
             "name": "Microsoft Cinema",
             "x": 0,
             "y": 0,
