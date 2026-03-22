@@ -28,7 +28,7 @@ UNIT = "inch"
 # Cleaning Up Fuel DEtections Stuff
 ELIPSON = 10
 MIN_SAMPLES = 1
-DISTANCE_THRESHOLD = 5
+DISTANCE_THRESHOLD = 50
 
 YOLO_INPUT_SIZE = 320
 YOLO_MODEL_FILE = "YoloModels/v26/nano/model.rknn"
