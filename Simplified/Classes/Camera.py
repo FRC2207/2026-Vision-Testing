@@ -115,8 +115,8 @@ class Camera:
             self.cap.set(cv2.CAP_PROP_FPS, self.fps_cap)
 
         self.stopped = False
-        # self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-        # self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 320)
+        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 320)
         # time.sleep(0.5)
 
         self.focal_length_pixels = (
