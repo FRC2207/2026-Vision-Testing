@@ -24,7 +24,7 @@ class FuelTracker:
         merged = []
         for group in groups:
             avg_pos = np.mean([f.get_position() for f in group], axis=0)
-            group[0].set_position(avg_pos)
+            group[0].position = avg_pos 
             merged.append(group[0])
 
         return merged
