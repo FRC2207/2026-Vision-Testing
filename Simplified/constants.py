@@ -1,7 +1,7 @@
 import numpy as np
 import json
 
-MODE = "game"
+MODE = "debug"
 # "game" for game
 # "test" for testing with robot or sim (change network tables IP)
 # "debug" for home stuff
@@ -37,4 +37,4 @@ YOLO_MODEL_FILE = "YoloModels/v26/nano/model.rknn"
 with open("Simplified/camera_positions.json", "r") as file:
     data = json.load(file)
 
-CAMERA_CONFIGS = data
+CAMERA_CONFIGS = data["cameras"]
