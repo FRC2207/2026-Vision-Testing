@@ -123,6 +123,7 @@ class Camera:
         self.model = YoloWrapper(self.yolo_model_file, self.core_mask, self.input_size, quantized=self.quantized)
         
         self.frame_lock = threading.Lock()
+        self._frame_event = threading.Event()  # signals preproc worker that a new frame is ready
 
         # Preprocessing pipeline queue — holds (preprocessed_buf, orig_frame, orig_shape)
         # maxsize=1 so if inference is slow, the old stale frame gets evicted and
@@ -158,6 +159,7 @@ class Camera:
             with self.frame_lock:
                 self.frame = frame
                 self.frame_timestamp = time.perf_counter()
+            self._frame_event.set()  # wake up preproc worker immediately instead of making it poll
                 
             # self.frame = frame
             # time.sleep(0.01) # Help not overuse CPU
@@ -176,10 +178,11 @@ class Camera:
 
             if frame is None or ts == last_ts:
                 # No new frame yet
-                time.sleep(0.0005)
+                self._frame_event.wait(timeout=0.05)
+                self._frame_event.clear()
                 continue
 
-            last_ts    = ts
+            last_ts = ts
             if not self._preproc_q.empty():
                 continue
 
@@ -297,7 +300,7 @@ class Camera:
             # Fast path: preproc thread already did the cvtColor + letterbox
             # concurrently with the last inference, so we just grab and go
             try:
-                preprocessed, orig_frame, orig_shape = self._preproc_q.get(timeout=0.15)
+                preprocessed, orig_frame, orig_shape = self._preproc_q.get(timeout=0.05)
             except queue.Empty:
                 self.logger.warning("Preproc pipeline timed out — no frame available.")
                 return None, None
