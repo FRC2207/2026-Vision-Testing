@@ -101,9 +101,7 @@ if __name__ == "__main__":
                 logger.exception(f"Vision exception: {e}")
             vision_s = time.perf_counter() - vision_start
 
-            fuel_tracker.set_fuel_list(fuel_list)
-            fuel_tracker.sort()
-            fuel_list = fuel_tracker.get_fuel_list()
+            fuel_list = fuel_tracker.update(fuel_list)
 
             flask_s = None
             if constants.APP_MODE:
