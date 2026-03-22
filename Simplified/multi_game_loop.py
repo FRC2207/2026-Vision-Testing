@@ -128,6 +128,8 @@ if __name__ == "__main__":
                 continue
 
             print(len(fuel_list))
+            for fuel in fuel_list:
+                logger.info(f"Fuel at ({fuel.x:.1f}, {fuel.y:.1f}) {constants.UNIT}")
 
             network_s = None
             if constants.USE_NETWORK_TABLES:
@@ -147,7 +149,7 @@ if __name__ == "__main__":
             )
             metrics.tick()
             logger.info(f"FPS: {1/loop_s:.1f}")
-            print(f"\rFPS: {1/loop_s:.3f}      ", end="")
+            # print(f"\rFPS: {1/loop_s:.3f}      ", end="")
     finally:
         camera_handler.destroy()
         metrics.destroy()
