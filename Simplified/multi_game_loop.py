@@ -129,7 +129,7 @@ if __name__ == "__main__":
 
             print(len(fuel_list))
             for fuel in fuel_list:
-                logger.info(f"Fuel at ({fuel.x:.1f}, {fuel.y:.1f}) {constants.UNIT}")
+                print(f"Fuel at ({fuel.x:.1f}, {fuel.y:.1f}) {constants.UNIT}")
 
             network_s = None
             if constants.USE_NETWORK_TABLES:
