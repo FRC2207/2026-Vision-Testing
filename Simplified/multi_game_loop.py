@@ -25,6 +25,7 @@ logging.basicConfig(
     filemode="w",
     filename="log.txt",
 )
+logging.getLogger('rknn').setLevel(logging.WARNING)
 
 logger = logging.getLogger(__name__)
 

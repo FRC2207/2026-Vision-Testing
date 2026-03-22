@@ -22,6 +22,9 @@ PAGE = """
 </html>
 """
 
+log = logging.getLogger('werkzeug')
+log.setLevel(logging.ERROR)
+
 class CameraApp:
     def __init__(self):
         self.app    = Flask(__name__)
