@@ -72,13 +72,6 @@ camera1 = Camera(
     fps_cap=30
 )
 
-print(f"cam0 fourcc: {int(camera0.cap.get(cv2.CAP_PROP_FOURCC)).to_bytes(4, 'little')}")
-print(f"cam0 fps: {camera0.cap.get(cv2.CAP_PROP_FPS)}")
-print(f"cam0 res: {camera0.cap.get(cv2.CAP_PROP_FRAME_WIDTH)}x{camera0.cap.get(cv2.CAP_PROP_FRAME_HEIGHT)}")
-print(f"cam1 fourcc: {int(camera1.cap.get(cv2.CAP_PROP_FOURCC)).to_bytes(4, 'little')}")
-print(f"cam1 fps: {camera1.cap.get(cv2.CAP_PROP_FPS)}")
-print(f"cam1 res: {camera1.cap.get(cv2.CAP_PROP_FRAME_WIDTH)}x{camera1.cap.get(cv2.CAP_PROP_FRAME_HEIGHT)}")
-
 metrics = Metrics()
 
 if constants.APP_MODE:
@@ -108,7 +101,7 @@ if __name__ == "__main__":
 
         while not shutdown_event.is_set():
             start_time = time.perf_counter()
-
+            camera_lag_s = (camera0.get_frame_age() + camera1.get_frame_age()) / 2
             vision_start = time.perf_counter()
             try:
                 raw_fuel_positions = camera_handler.predict()
@@ -138,7 +131,13 @@ if __name__ == "__main__":
             if len(fuel_positions_fuel_list) == 0:
                 logger.warning("No fuel positions detected. Skipping loop iteration.")
                 loop_s = time.perf_counter() - start_time
-                metrics.record(loop_s=loop_s, vision_s=vision_s, flask_s=flask_s)
+                metrics.record(
+                    loop_s=loop_s,
+                    vision_s=vision_s,
+                    camera_lag_s=camera_lag_s,
+                    flask_s=flask_s,
+                    network_s=network_s
+                )
                 metrics.tick()
                 logger.info(f"FPS: {1/loop_s:.1f}")
                 print(f"\rFPS: {1/loop_s:.3f}      ", end="")
@@ -156,8 +155,9 @@ if __name__ == "__main__":
             metrics.record(
                 loop_s=loop_s,
                 vision_s=vision_s,
+                camera_lag_s=camera_lag_s,
                 flask_s=flask_s,
-                network_s=network_s,
+                network_s=network_s
             )
             metrics.tick()
             logger.info(f"FPS: {1/loop_s:.1f}")
