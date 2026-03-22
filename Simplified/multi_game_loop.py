@@ -12,7 +12,7 @@ from Classes.FuelTracker import FuelTracker
 from Classes.MultipleCameraHandler import MultipleCameraHandler
 from Classes.Metrics import Metrics
 import signal
-from rknnlite.api import RKNNLite # No error handling let it error out :)
+from rknnlite.api import RKNNLite
 import cv2
 import sys
 
@@ -29,7 +29,7 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-logger.info(f"Creating camera objects...")
+logger.info("Creating camera objects...")
 camera0 = Camera(
     "/dev/video0",
     constants.YOLO_MODEL_FILE,
@@ -80,29 +80,30 @@ if __name__ == "__main__":
 
         try:
             raw_fuel_positions = camera_handler.predict()
-            fuel_positions_fuel_list = numpy_to_fuel_list(raw_fuel_positions)
+            fuel_list = numpy_to_fuel_list(raw_fuel_positions)
         except Exception as e:
             logger.warning(f"Warm-up run failed: {e}")
-            fuel_positions_fuel_list = []
+            fuel_list = []
 
-        fuel_tracker = FuelTracker(fuel_positions_fuel_list, constants.DISTANCE_THRESHOLD)
+        fuel_tracker = FuelTracker(fuel_list, constants.DISTANCE_THRESHOLD)
         logger.info("Warmed up.")
 
         while not shutdown_event.is_set():
             start_time = time.perf_counter()
             camera_lag_s = (camera0.get_frame_age() + camera1.get_frame_age()) / 2
+
             vision_start = time.perf_counter()
             try:
                 raw_fuel_positions = camera_handler.predict()
-                fuel_positions_fuel_list = numpy_to_fuel_list(raw_fuel_positions)
+                fuel_list = numpy_to_fuel_list(raw_fuel_positions)
             except Exception as e:
-                fuel_positions_fuel_list = []
+                fuel_list = []
                 logger.exception(f"Vision exception: {e}")
             vision_s = time.perf_counter() - vision_start
 
-            fuel_tracker.set_fuel_list(fuel_positions_fuel_list)
+            fuel_tracker.set_fuel_list(fuel_list)
             fuel_tracker.sort()
-            fuel_positions_fuel_list = fuel_tracker.get_fuel_list()
+            fuel_list = fuel_tracker.get_fuel_list()
 
             flask_s = None
             if constants.APP_MODE:
@@ -114,10 +115,7 @@ if __name__ == "__main__":
                     camera_app.set_frame(frame)
                     flask_s = time.perf_counter() - flask_start
 
-            # for fuel in fuel_positions_fuel_list:
-            #     print(fuel)
-
-            if len(fuel_positions_fuel_list) == 0:
+            if len(fuel_list) == 0:
                 logger.warning("No fuel positions detected. Skipping loop iteration.")
                 loop_s = time.perf_counter() - start_time
                 metrics.record(
@@ -135,7 +133,7 @@ if __name__ == "__main__":
             if constants.USE_NETWORK_TABLES:
                 network_start = time.perf_counter()
                 network_handler.send_fuel_list(
-                    fuel_positions_fuel_list, "vision_data", "VisionData"
+                    fuel_list, "vision_data", "VisionData"
                 )
                 network_s = time.perf_counter() - network_start
 

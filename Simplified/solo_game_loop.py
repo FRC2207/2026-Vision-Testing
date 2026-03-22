@@ -3,7 +3,6 @@ from Classes.Camera import Camera
 from Classes.PathPlanner import PathPlanner
 from Classes.NetworkTableHandler import NetworkTableHandler
 import time
-import math
 import constants
 from Classes.CameraApp import CameraApp
 import threading
@@ -14,22 +13,19 @@ from Classes.FuelTracker import FuelTracker
 from Classes.Metrics import Metrics
 import signal
 
-# This is something for clean shutdowns (usually ctrl + c)
 shutdown_event = threading.Event()
-
 signal.signal(signal.SIGINT,  lambda sig, frame: shutdown_event.set())
 signal.signal(signal.SIGTERM, lambda sig, frame: shutdown_event.set())
 
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    filemode="w",  # Overwrite, don't append
+    filemode="w",
     filename="log.txt",
 )
 
 logger = logging.getLogger(__name__)
 
-# Camera class
 camera = Camera(
     "/dev/video0",
     constants.YOLO_MODEL_FILE,
@@ -50,56 +46,46 @@ if constants.APP_MODE:
 if constants.USE_NETWORK_TABLES:
     network_handler = NetworkTableHandler(constants.NETWORKTABLES_IP)
 
-def numpy_to_fuel_list(fuel_positions):
+def numpy_to_fuel_list(fuel_positions: np.ndarray) -> list[Fuel]:
     return [Fuel(p[0], p[1]) for p in fuel_positions]
-
-def fuel_list_to_numpy(fuel_list: list[Fuel]):
-    return np.array([fuel.get_position() for fuel in fuel_list])
 
 if __name__ == "__main__":
     try:
         logger.info("Starting simplified, single-camera loop.")
 
-        # Create planner
         try:
             raw_fuel_positions, annotated_frame = camera.run()
-            fuel_positions_fuel_list = numpy_to_fuel_list(raw_fuel_positions)
-            fuel_positions_numpy_list = raw_fuel_positions
+            fuel_list = numpy_to_fuel_list(raw_fuel_positions)
         except Exception as e:
             logger.warning(f"Warm-up run failed: {e}")
-            fuel_positions_fuel_list = []
-            fuel_positions_numpy_list = np.empty((0, 2))
+            fuel_list = []
+            annotated_frame = None
 
         planner = PathPlanner(
-            fuel_positions_numpy_list,
+            fuel_list,
             constants.ELIPSON,
             constants.MIN_SAMPLES,
             constants.DEBUG_MODE
         )
-        fuel_tracker = FuelTracker(fuel_positions_fuel_list, constants.DISTANCE_THRESHOLD)
+        fuel_tracker = FuelTracker(fuel_list, constants.DISTANCE_THRESHOLD)
 
-        # i = 0
-        # while i < 500:
         while not shutdown_event.is_set():
             start_time = time.perf_counter()
             camera_lag_s = camera.get_frame_age()
-            # Vision
+
             vision_start = time.perf_counter()
             try:
                 raw_fuel_positions, annotated_frame = camera.run()
-                fuel_positions_fuel_list = numpy_to_fuel_list(raw_fuel_positions)
-                fuel_positions_numpy_list = raw_fuel_positions
+                fuel_list = numpy_to_fuel_list(raw_fuel_positions)
             except Exception as e:
-                fuel_positions_fuel_list, fuel_positions_numpy_list, annotated_frame = [], None, None
-                logger.exception(f"Exception: {e}")
+                fuel_list = []
+                annotated_frame = None
+                logger.exception(f"Vision exception: {e}")
             vision_s = time.perf_counter() - vision_start
 
-            fuel_tracker.set_fuel_list(fuel_positions_fuel_list)
+            fuel_tracker.set_fuel_list(fuel_list)
             fuel_tracker.sort()
-            fuel_positions_fuel_list = fuel_tracker.get_fuel_list()
-
-            # for fuel_position in fuel_positions:
-                # print(f"\r{fuel_position}")
+            fuel_list = fuel_tracker.get_fuel_list()
 
             flask_s = None
             if constants.APP_MODE:
@@ -110,7 +96,7 @@ if __name__ == "__main__":
                     camera_app.set_frame(annotated_frame)
                     flask_s = time.perf_counter() - flask_start
 
-            if len(fuel_positions_fuel_list) == 0:
+            if len(fuel_list) == 0:
                 logger.warning("No fuel positions detected. Skipping loop iteration.")
                 loop_s = time.perf_counter() - start_time
                 metrics.record(
@@ -122,29 +108,16 @@ if __name__ == "__main__":
                 metrics.tick()
                 print(f"\rFPS: {1/loop_s:.1f}      ", end="")
                 continue
-            else:
-                # logger.info(f"Detected fuels: {len(fuel_positions)}")
-                pass
 
-            _, fuel_positions = planner.update_fuel_positions(
-                fuel_positions_numpy_list
-            )
-            network_start_time = time.perf_counter()
+            noise_positions, fuel_list = planner.update_fuel_positions(fuel_list)
+
+            network_s = None
             if constants.USE_NETWORK_TABLES:
-                # network_handler.send_data(
-                    # fuel_positions_fuel_list, "Vision", "VisionData"
-                # ) Old number array
-
+                network_start = time.perf_counter()
                 network_handler.send_fuel_list(
-                    fuel_positions_fuel_list, "vision_data", "VisionData"
+                    fuel_list, "vision_data", "VisionData"
                 )
-            network_s = time.perf_counter() - network_start_time
-
-            # end_time = time.perf_counter()
-            # est_fps = 1 / (end_time - start_time)
-            # logger.info(f"Loop run time: {end_time - start_time}. Est FPS: {est_fps}")
-            # logger.info(f"Detected Fuel Positions: {[fuel_position for fuel_position in fuel_positions]}")
-            # i += 1
+                network_s = time.perf_counter() - network_start
 
             loop_s = time.perf_counter() - start_time
             metrics.record(
