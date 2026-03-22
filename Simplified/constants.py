@@ -23,7 +23,7 @@ else:
     NETWORKTABLES_IP = ""
 
 # Fuel constants
-UNIT = "meter"
+UNIT = "inches"
 
 # Cleaning Up Fuel DEtections Stuff
 ELIPSON = 10
