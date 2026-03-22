@@ -61,6 +61,7 @@ class Camera:
                         self.known_calibration_pixel_height
                         * self.known_calibration_distance
                     ) / self.ball_d_inches
+                    self.logger.info("Focal length calculated: {:.2f} pixels".format(self.focal_length_pixels))
                 except ZeroDivisionError:
                     self.logger.warning(
                         "Calibration game piece size is zero, cannot calculate focal length. Defaulting to 1."
