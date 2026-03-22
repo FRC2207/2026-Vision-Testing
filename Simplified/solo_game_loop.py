@@ -32,24 +32,13 @@ logger = logging.getLogger(__name__)
 # Camera class
 camera = Camera(
     "/dev/video0",
-    # "Images/1.png",
-    constants.CAMERA_FOV,
-    constants.KNOWN_CALIBRATION_DISTANCE,
-    constants.BALL_D_INCHES,
-    constants.KNOWN_CALIBRATION_PIXEL_HEIGHT,
     constants.YOLO_MODEL_FILE,
-    constants.CAMERA_DOWNWARD_PITCH_ANGLE,
-    constants.CAMERA_BOT_RELATIVE_YAW,
-    constants.CAMERA_HEIGHT,
-    constants.CAMERA_X_OFFSET,
-    constants.CAMERA_Y_OFFSET,
-    grayscale=constants.GRAYSCALE,
+    constants.CAMERA_CONFIGS["Arducam"],
     debug_mode=constants.DEBUG_MODE,
     subsystem="field",
     input_size=(constants.YOLO_INPUT_SIZE, constants.YOLO_INPUT_SIZE),
     quantized=True,
-    unit=constants.UNIT,
-    fps_cap=50
+    unit=constants.UNIT
 )
 
 metrics = Metrics()

@@ -32,47 +32,28 @@ logger = logging.getLogger(__name__)
 logger.info(f"Creating camera objects...")
 camera0 = Camera(
     "/dev/video0",
-    constants.CAMERA_FOV,
-    constants.KNOWN_CALIBRATION_DISTANCE,
-    constants.BALL_D_INCHES,
-    constants.KNOWN_CALIBRATION_PIXEL_HEIGHT,
     constants.YOLO_MODEL_FILE,
-    constants.CAMERA_DOWNWARD_PITCH_ANGLE,
-    constants.CAMERA_BOT_RELATIVE_YAW,
-    constants.CAMERA_HEIGHT,
-    constants.CAMERA_X_OFFSET,
-    constants.CAMERA_Y_OFFSET,
-    grayscale=constants.GRAYSCALE,
+    constants.CAMERA_CONFIGS["Arducam"],
     debug_mode=constants.DEBUG_MODE,
     subsystem="field",
     input_size=(constants.YOLO_INPUT_SIZE, constants.YOLO_INPUT_SIZE),
     quantized=True,
     unit=constants.UNIT,
-    core_mask=RKNNLite.NPU_CORE_0_1,
-    fps_cap=50
+    core_mask=RKNNLite.NPU_CORE_0_1
 )
 
 camera1 = Camera(
     "/dev/video2",
-    constants.CAMERA_FOV,
-    constants.KNOWN_CALIBRATION_DISTANCE,
-    constants.BALL_D_INCHES,
-    constants.KNOWN_CALIBRATION_PIXEL_HEIGHT,
     constants.YOLO_MODEL_FILE,
-    constants.CAMERA_DOWNWARD_PITCH_ANGLE,
-    constants.CAMERA_BOT_RELATIVE_YAW,
-    constants.CAMERA_HEIGHT,
-    constants.CAMERA_X_OFFSET,
-    constants.CAMERA_Y_OFFSET,
-    grayscale=constants.GRAYSCALE,
+    constants.CAMERA_CONFIGS["Microsoft Cinema"],
     debug_mode=constants.DEBUG_MODE,
     subsystem="field",
     input_size=(constants.YOLO_INPUT_SIZE, constants.YOLO_INPUT_SIZE),
     quantized=True,
     unit=constants.UNIT,
-    core_mask=RKNNLite.NPU_CORE_2,
-    fps_cap=30
+    core_mask=RKNNLite.NPU_CORE_2
 )
+
 logger.info("Success!")
 
 logger.info("Creating metrics, camera app, camera handler, and network table handlers...")

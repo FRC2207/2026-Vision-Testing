@@ -1,11 +1,52 @@
 {
     "cameras": [
         {
-            "x": -3,
-            "y": -9,
-            "height": 2,
-            "downward_pitch": 0,
-            "robot_relative_yaw": 180
+            "name": "Microsoft Cinema",
+            "x": 0,
+            "y": 0,
+            "height": 0,
+            "pitch": 0,
+            "yaw": 0,
+            "grayscale": "false",
+            "fps_cap": 30,
+            "calibration": {
+                "size": 292.8333333333333,
+                "distance": 12,
+                "game_piece_size": 5.91,
+                "fov": 74.9
+            }
+        },
+        {
+            "name": "Leveno Laptop",
+            "x": 0,
+            "y": 0,
+            "height": 0,
+            "pitch": 0,
+            "yaw": 0,
+            "grayscale": "false",
+            "fps_cap": 30,
+            "calibration": {
+                "size": 334,
+                "distance": 12,
+                "game_piece_size": 5.91,
+                "fov": 74.9
+            }
+        },
+        {
+            "name": "Crappy Microsoft Webcam",
+            "x": 0,
+            "y": 0,
+            "height": 0,
+            "pitch": 0,
+            "yaw": 0,
+            "grayscale": "false",
+            "fps_cap": 30,
+            "calibration": {
+                "size": 315,
+                "distance": 12,
+                "game_piece_size": 5.91,
+                "fov": 74.9
+            }
         }
     ]
 }

@@ -1,78 +1,40 @@
 import numpy as np
 import json
 
-# Got around 20 fps, need to optimize. 21 with __slots__
+MODE = "game"
+# "game" for game
+# "test" for testing with robot or sim (change network tables IP)
+# "debug" for home stuff
 
-DEBUG_MODE = True
-APP_MODE = True
-USE_NETWORK_TABLES = True # Obvisouly shuold be set to true for game, but testing set to False
-
-#######################################################################
-# Custom PathPlanner Stuff
-#######################################################################
-
-# Robot
-STARTING_POSITION = np.array([0, 0])
-DISTANCE_THRESHOLD = 5
+if MODE == "game":
+    DEBUG_MODE = False
+    APP_MODE = False
+    USE_NETWORK_TABLES = True
+    NETWORKTABLES_IP = "10.22.7.2"
+elif MODE == "test":
+    DEBUG_MODE = True
+    APP_MODE = True
+    USE_NETWORK_TABLES = True
+    NETWORKTABLES_IP = "127.0.0.1"
+else:
+    DEBUG_MODE = True
+    APP_MODE = True
+    USE_NETWORK_TABLES = False
+    NETWORKTABLES_IP = ""
 
 # Fuel constants
-BALL_DIAMETER = 6
 UNIT = "meter"
 
-# Field Constants
-MIN_X = 0
-MAX_X = 317
-MIN_Y = 0
-MAX_Y = 690.88
-
-# DBSCAN Stuff
+# Cleaning Up Fuel DEtections Stuff
 ELIPSON = 10
 MIN_SAMPLES = 1
+DISTANCE_THRESHOLD = 5
 
 YOLO_INPUT_SIZE = 320
-
-#######################################################################
-# Camera stuff
-#######################################################################
-CAMERA_FOV = 74.9
-KNOWN_CALIBRATION_DISTANCE = 12
-BALL_D_INCHES = 5.90551
-
-##### FOR LENEVO LAPTOP #####
-# KNOWN_CALIBRATION_PIXEL_HEIGHT = 334
-##### FOR MICROSOFT CINEMA WEBCAM #####
-KNOWN_CALIBRATION_PIXEL_HEIGHT = 292.8333333333333
-##### FOR THE CRAPPY MICROSOFT WEBCAM ######
-# KNOWN_CALIBRATION_PIXEL_HEIGHT = 315 # Terrible mesearmenuts
-
-# YOLO_MODEL_FILE = "YoloModels/v8_or_v11/3.1-320x320/color-3.1-v11.onnx"
 YOLO_MODEL_FILE = "YoloModels/v26/nano/model.rknn"
-#YOLO_MODEL_FILE = "YoloModels/v26/nano/batchTesting/color-3.1-v26.rknn"
-GRAYSCALE = False
-NETWORKTABLES_IP = "10.22.7.2" # Pretty sure this is right
-# NETWORKTABLES_IP = "10.22.7.21"
-# NETWORKTABLES_IP = "127.0.0.1"
-# NETWORKTABLES_IP = "10.22.7.22"
+# YOLO_MODEL_FILE = "YoloModels/v8_or_v11/3.1-320x320/color-3.1-v11.onnx"
 
 with open("Simplified/camera_positions.json", "r") as file:
     data = json.load(file)
 
-for camera in data["cameras"]:
-    CAMERA_DOWNWARD_PITCH_ANGLE = camera["downward_pitch"]
-    CAMERA_BOT_RELATIVE_YAW = camera["robot_relative_yaw"]
-    CAMERA_HEIGHT = camera["height"]
-    CAMERA_X_OFFSET = camera["x"]
-    CAMERA_Y_OFFSET = camera["y"]
-
-CAMERA_CONFIGS = []
-
-for i, cam_data in enumerate(data["cameras"]):
-    config = {
-        "index": i,
-        "pitch": cam_data["downward_pitch"],
-        "yaw": cam_data["robot_relative_yaw"],
-        "height": cam_data["height"],
-        "x": cam_data["x"],
-        "y": cam_data["y"]
-    }
-    CAMERA_CONFIGS.append(config)
+CAMERA_CONFIGS = data
