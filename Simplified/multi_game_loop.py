@@ -24,11 +24,7 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     filemode="w",
-    filename="log.txt",
-    handlers=[
-        logging.FileHandler("log.txt", mode="w"),
-        # logging.StreamHandler(sys.stdout) # Also print to console
-    ]
+    filename="log.txt"
 )
 
 logger = logging.getLogger(__name__)

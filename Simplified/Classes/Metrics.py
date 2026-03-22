@@ -70,7 +70,6 @@ class Metrics:
         )
 
     def destroy(self):
-        """Write interactive Plotly HTML timeline and log a summary."""
         self._log_final_summary()
         if not PLOTLY_AVAILABLE:
             self.logger.warning(
