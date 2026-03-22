@@ -81,8 +81,6 @@ class Camera:
         self.logger.info(f"Camera object created with: {self.__dict__}")
 
         self.frame_timestamp = None
-        self._last_result = None
-        self._last_frame  = None
 
         self.conversions = {
             "meter": 0.0254,
@@ -126,6 +124,10 @@ class Camera:
         
         self.frame_lock = threading.Lock()
         self._frame_event = threading.Event()  # signals preproc worker that a new frame is ready
+        # Cache last good result so get_yolo_data never blocks or returns None just because
+        # the preproc worker hasnt finished the next frame yet
+        self._last_result = None
+        self._last_frame  = None  # signals preproc worker that a new frame is ready
 
         # Preprocessing pipeline queue — holds (preprocessed_buf, orig_frame, orig_shape)
         # maxsize=1 so if inference is slow, the old stale frame gets evicted and
@@ -179,12 +181,13 @@ class Camera:
                 ts    = self.frame_timestamp
 
             if frame is None or ts == last_ts:
-                # No new frame yet
+                # No new frame yet — wait for _reader to signal one instead of busy-polling
+                # This means we wake up instantly when a frame arrives instead of up to 0.5ms late
                 self._frame_event.wait(timeout=0.05)
                 self._frame_event.clear()
                 continue
 
-            last_ts = ts
+            last_ts    = ts
             if not self._preproc_q.empty():
                 continue
 
@@ -299,6 +302,9 @@ class Camera:
 
     def get_yolo_data(self):
         if self._use_pipeline:
+            # Non-blocking grab — if no new preprocessed frame is ready yet, return the
+            # last good result immediately so the loop never stalls or gets a None frame.
+            # This keeps FPS steady and stops the flask stream from flickering.
             try:
                 preprocessed, orig_frame, orig_shape = self._preproc_q.get_nowait()
             except queue.Empty:
