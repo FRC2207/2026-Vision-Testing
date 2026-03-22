@@ -41,3 +41,33 @@ class MultipleCameraHandler:
                 all_positions.append(pos)
 
         return np.vstack(all_positions) if all_positions else np.empty((0, 2))
+
+    def get_combined_frame(self):
+        frames = []
+        for i, cam in enumerate(self.cameras):
+            with self._locks[i]:
+                f = self._annotated_frames[i]
+            if f is None:
+                f = cam.get_frame()
+            if f is not None:
+                frames.append(f)
+
+        if not frames:
+            return None
+        if len(frames) == 1:
+            return frames[0]
+
+        target_h = min(f.shape[0] for f in frames)
+        resized = []
+        for f in frames:
+            h, w = f.shape[:2]
+            if h != target_h:
+                new_w = int(w * (target_h / h))
+                f = cv2.resize(f, (new_w, target_h), interpolation=cv2.INTER_AREA)
+            resized.append(f)
+        return np.hstack(resized)
+
+    def destroy(self):
+        self._stopped = True
+        for cam in self.cameras:
+            cam.destroy()
