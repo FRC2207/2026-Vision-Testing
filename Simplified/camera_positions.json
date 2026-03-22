@@ -10,10 +10,10 @@
             "grayscale": "false",
             "fps_cap": 30,
             "calibration": {
-                "size": 0,
-                "distance": 0,
-                "game_piece_size": 0,
-                "fov": 0
+                "size": 266.9,
+                "distance": 12,
+                "game_piece_size": 5.91,
+                "fov": 60
             }
         },
         "Microsoft Cinema": {
