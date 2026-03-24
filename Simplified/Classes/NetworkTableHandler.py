@@ -63,6 +63,23 @@ class NetworkTableHandler:
         except Exception as e:
             self.logger.error(f"Failed to send fuel structs: {e}")
 
+    def send_boolean(self, value: bool, data_name: str, table_name: str):
+        try:
+            if not self.inst.isConnected():
+                return
+
+            table = self._get_table(table_name)
+            pub_key = f"pub/{table_name}/{data_name}"
+            if pub_key not in self._subscribers:
+                self._subscribers[pub_key] = table.getBooleanTopic(data_name).publish()
+            
+            self._subscribers[pub_key].set(value)
+            self.inst.flush()
+            
+            self.logger.info(f"Sent boolean {value} for {data_name}")
+        except Exception as e:
+            self.logger.error(f"Failed to send boolean: {e}")
+
     def get_data(self, data_type, data_name: str, table_name: str):
         if not self.inst.isConnected():
             return [0.0, 0.0]

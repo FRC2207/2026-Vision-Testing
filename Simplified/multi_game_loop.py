@@ -47,7 +47,7 @@ camera1 = Camera(
     constants.YOLO_MODEL_FILE,
     constants.CAMERA_CONFIGS["Microsoft Cinema"],
     debug_mode=constants.DEBUG_MODE,
-    subsystem="field",
+    subsystem="hopper",
     input_size=(constants.YOLO_INPUT_SIZE, constants.YOLO_INPUT_SIZE),
     quantized=True,
     unit=constants.UNIT,
@@ -134,6 +134,14 @@ if __name__ == "__main__":
                 network_handler.send_fuel_list(
                     fuel_list, "vision_data", "VisionData"
                 )
+
+                for camera in camera_handler.cameras:
+                    # Sends hopper data
+                    data = camera.get_data_for_subsytem("hopper")
+                    if data is not None:
+                        network_handler.send_boolean(
+                            data, "has_fuel", "VisionData"
+                        )
                 network_s = time.perf_counter() - network_start
 
             loop_s = time.perf_counter() - start_time

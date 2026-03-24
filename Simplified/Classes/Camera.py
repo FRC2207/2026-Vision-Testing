@@ -403,6 +403,18 @@ class Camera:
             if pt is not None:
                 map_points.append(pt)
         return np.array(map_points) if map_points else np.empty((0, 2))
+    
+    def get_data_for_subsytem(self, target: str):
+        if self.subsystem == target:
+            if self.subsystem == "field":
+                return self.run()
+            elif self.subsystem == "hopper":
+                return True if self.run()[0].shape[0] > 0 else False
+            else:
+                self.logger.warning(f"Unknown subsystem: {self.subsystem}, defaulting to field data.")
+                return self.run()
+        else:
+            return None
 
     def run(self):
         data, frame = self.get_yolo_data()

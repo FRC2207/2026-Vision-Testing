@@ -29,7 +29,7 @@ class MultipleCameraHandler:
                 positions, frame = camera.run()
                 with self._locks[i]:
                     self._positions[i] = positions if positions is not None else np.empty((0, 2))
-                    self._frames[i]    = frame
+                    self._frames[i] = frame
                 self._fresh[i].set()  # signal: this camera has new data
             except Exception as e:
                 self.logger.warning(f"Camera {camera.source} error: {e}")
