@@ -1,33 +1,37 @@
-from .Fuel import Fuel
-from .CustomDBScan import CustomDBScan
 import numpy as np
+from .Fuel import Fuel
 
 class FuelTracker:
     def __init__(self, fuel_list: list[Fuel] = None, distance_threshold: float = 0.127):
-        self.fuel_list = fuel_list or []
+        self.fuel_list = fuel_list if fuel_list is not None else []
         self.distance_threshold = distance_threshold
 
-    def update(self, new_fuel_list: list[Fuel]) -> list[Fuel]:
-        self.fuel_list = self._deduplicate(new_fuel_list)
+    def update(self, new_fuel_list: list[Fuel]):
+        for fuel in self.fuel_list:
+            fuel.update()
+        
+        self.fuel_list = [f for f in self.fuel_list if not f.destroyed]
+
+        self.add_fuel_list(new_fuel_list)
         return self.fuel_list
-    def _deduplicate(self, fuels: list[Fuel]) -> list[Fuel]:
-        if not fuels:
-            return []
 
-        positions = np.array([f.get_position() for f in fuels])
+    def add_fuel_list(self, fuels: list[Fuel]):
+        for fuel in fuels:
+            if not self._fuel_already_exists(fuel, self.fuel_list):
+                self.fuel_list.append(fuel)
 
-        scanner = CustomDBScan(positions, eps=self.distance_threshold, samples=1)
-        labels = scanner.get_dbscan()
-
-        # Merge each cluster into its centroid
-        merged = {}
-        for label, pos in zip(labels, positions):
-            merged.setdefault(label, []).append(pos)
-
-        return [
-            Fuel(*np.mean(g, axis=0).tolist())
-            for g in merged.values()
-        ]
+    def _fuel_already_exists(self, new_fuel: Fuel, existing_fuels: list[Fuel]) -> bool:
+        if not existing_fuels:
+            return False
+        
+        new_pos = np.array(new_fuel.get_position())
+        for existing in existing_fuels:
+            existing_pos = np.array(existing.get_position())
+            if np.linalg.norm(new_pos - existing_pos) < self.distance_threshold:
+                existing.reset_time()
+                return True
+        return False
 
     def get_fuel_list(self) -> list[Fuel]:
         return self.fuel_list
+    

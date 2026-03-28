@@ -1,5 +1,8 @@
 import numpy as np
 import json
+import VisionCoreConfig
+
+CONFIG = VisionCoreConfig("Simplified/config.json")
 
 MODE = "test"
 # "game" for game
@@ -7,34 +10,17 @@ MODE = "test"
 # "debug" for home stuff
 
 if MODE == "game":
-    DEBUG_MODE = False
-    APP_MODE = False
-    USE_NETWORK_TABLES = True
-    NETWORKTABLES_IP = "10.22.7.2"
+    CONFIG.set("debug_mode", False)
+    CONFIG.set("app_mode", False)
+    CONFIG.set("use_network_tables", True)
+    CONFIG.set("network_tables_ip", "10.22.7.2")
 elif MODE == "test":
-    DEBUG_MODE = True
-    APP_MODE = True
-    USE_NETWORK_TABLES = True
-    NETWORKTABLES_IP = "192.168.1.166"
+    CONFIG.set("debug_mode", True)
+    CONFIG.set("app_mode", True)
+    CONFIG.set("use_network_tables", True)
+    CONFIG.set("network_tables_ip", "192.168.1.166")
 else:
-    DEBUG_MODE = True
-    APP_MODE = True
-    USE_NETWORK_TABLES = False
-    NETWORKTABLES_IP = ""
-
-# Fuel constants
-UNIT = "meter"
-
-# Cleaning Up Fuel DEtections Stuff
-ELIPSON = 10
-MIN_SAMPLES = 1
-DISTANCE_THRESHOLD = 0.127 # 5 inches
-
-YOLO_INPUT_SIZE = 320
-YOLO_MODEL_FILE = "YoloModels/v26/nano/model.rknn"
-# YOLO_MODEL_FILE = "YoloModels/v8_or_v11/3.1-320x320/color-3.1-v11.onnx"
-
-with open("Simplified/camera_positions.json", "r") as file:
-    data = json.load(file)
-
-CAMERA_CONFIGS = data["cameras"]
+    CONFIG.set("debug_mode", True)
+    CONFIG.set("app_mode", True)
+    CONFIG.set("use_network_tables", False)
+    CONFIG.set("network_tables_ip", "")

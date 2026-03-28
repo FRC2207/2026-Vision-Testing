@@ -18,13 +18,12 @@ FIELD_Y = 8.21
 ROBOT_SPEED = 2.0
 COLLECT_RADIUS = 0.4
 NUM_BALLS = 100
-NOISE_STDDEV = 0.03  # metres of gaussian noise added to simulate camera error
+NOISE_STDDEV = 0.00  # metres of gaussian (fancy name bruh) noise added to simulate camera error
 
 network_handler = NetworkTableHandler("127.0.0.1")
 
 space = pymunk.Space()
 space.damping = 0.3
-
 
 def add_walls():
     static = space.static_body
@@ -62,7 +61,6 @@ def make_robot(x, y):
 
 def random_field_pos():
     return random.uniform(0.5, FIELD_X - 0.5), random.uniform(0.5, FIELD_Y - 0.5)
-
 
 if __name__ == "__main__":
     add_walls()
