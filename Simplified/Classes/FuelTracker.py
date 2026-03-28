@@ -35,4 +35,3 @@ class FuelTracker:
 
     def get_fuel_list(self) -> list[Fuel]:
         return self.fuel_list
-    

@@ -6,12 +6,21 @@ import time
 import dataclasses
 import wpiutil.wpistruct
 from ntcore import NetworkTableInstance
+import wpiutil.wpistruct
+from ntcore import NetworkTableInstance
+from wpimath.geometry import Pose2d, Translation2d, Rotation2d
 
 @wpiutil.wpistruct.make_wpistruct(name="Fuel")
 @dataclasses.dataclass
 class FuelStruct:
     x: float
     y: float
+
+@wpiutil.wpistruct.make_wpistruct(name="Pose2d")
+@dataclasses.dataclass
+class Pose2dStruct:
+    translation: Translation2d
+    rotation: Rotation2d
 
 class NetworkTableHandler:
     def __init__(self, ip: str):
@@ -39,13 +48,39 @@ class NetworkTableHandler:
             self._tables[table_name] = self.inst.getTable(table_name)
         return self._tables[table_name]
     
+    def get_robot_pose(self):
+        try:
+            if not self.inst.isConnected():
+                return Pose2d()
+            
+            table_name = "AdvantageScope/RealOutputs/Odometry"
+            data_name = "RobotPose"
+            sub_key = f"{table_name}/{data_name}"
+            
+            if sub_key not in self._subscribers:
+                table = self._get_table(table_name)
+                self._subscribers[sub_key] = table.getStructTopic(data_name, Pose2dStruct).subscribe(Pose2d())
+            
+            return self._subscribers[sub_key].get()
+        except Exception as e:
+            self.logger.error(f"Failed to get robot pose: {e}")
+            return Pose2d()
+    
     def send_fuel_list(self, fuels: list[Fuel], data_name: str="fuel_data", table_name: str="VisionData"):
         try:
             if not self.inst.isConnected():
                 return
 
             table = self._get_table(table_name)
+
+            robot_pose = self.get_robot_pose()
+            robot_x = robot_pose.X()
+            robot_y = robot_pose.Y()
             
+            for fuel in fuels:
+                fuel.x += robot_x
+                fuel.y += robot_y
+
             struct_list = []
             for f in fuels:
                 pos = f.get_position_normally()
