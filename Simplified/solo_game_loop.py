@@ -74,7 +74,11 @@ if __name__ == "__main__":
                 logger.exception(f"Vision exception: {e}")
             vision_s = time.perf_counter() - vision_start
 
-            fuel_list = fuel_tracker.update(fuel_list)
+            robot_pose = network_handler.get_robot_pose()
+            robot_x = robot_pose.X()
+            robot_y = robot_pose.Y()
+            
+            fuel_list = fuel_tracker.update(fuel_list, np.array(robot_x, robot_y))
 
             flask_s = None
             if constants["app_mode"]:

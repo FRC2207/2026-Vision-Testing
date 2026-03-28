@@ -73,14 +73,6 @@ class NetworkTableHandler:
 
             table = self._get_table(table_name)
 
-            robot_pose = self.get_robot_pose()
-            robot_x = robot_pose.X()
-            robot_y = robot_pose.Y()
-            
-            for fuel in fuels:
-                fuel.x += robot_x
-                fuel.y += robot_y
-
             struct_list = []
             for f in fuels:
                 pos = f.get_position_normally()
