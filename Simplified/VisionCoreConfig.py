@@ -3,6 +3,8 @@ import logging
 
 class VisionCoreConfig:
     def __init__(self, file_path: str = None):
+        self.logger = logging.getLogger(__name__)
+
         self.default_config = {
             "unit": "meter",
             "dbscan": {"elipson": 0, "min_samples": 0},
@@ -31,14 +33,14 @@ class VisionCoreConfig:
             }
         }
         self.config = self.default_config.copy()
+
+        if file_path:
+            self.load_from_file(file_path)
+
         self.camera_configs = {}
         for cam_name, cam_config in self.config["camera_configs"].items():
             self.camera_configs[cam_name] = VisionCoreCameraConfig(cam_config)
         
-        self.logger = logging.getLogger(__name__)
-        if file_path:
-            self.load_from_file(file_path)
-
     def camera_config(self, cam_name: str):
         return self.camera_configs.get(cam_name, {})
 
@@ -92,22 +94,24 @@ class VisionCoreConfig:
     def __getattr__(self, item):
         return self.get(item)
     
-class VisionCoreCameraConfig(VisionCoreConfig):
-    def __init__(self, config: dict = None):
-        self.default_config = {
-            "default": {
-                "name": "default",
-                "x": 0, "y": 0, "height": 0, "pitch": 0, "yaw": 0,
-                "grayscale": False,
-                "fps_cap": -1,
-                "calibration": {"size": 0, "distance": 0, "game_piece_size": 0, "fov": 0},
-                "source": "/dev/video0",
-                "subsystem": "field"
-            }
+class VisionCoreCameraConfig:
+    def __init__(self, config_dict: dict = None):
+        self.defaults = {
+            "name": "default",
+            "x": 0, "y": 0, "height": 0, "pitch": 0, "yaw": 0,
+            "grayscale": False,
+            "fps_cap": -1,
+            "calibration": {"size": 0, "distance": 0, "game_piece_size": 0, "fov": 0},
+            "source": "/dev/video0",
+            "subsystem": "field"
         }
-        self.config = self.default_config.copy()
+        
+        self.data = self.defaults.copy()
+        if config_dict:
+            self.data.update(config_dict)
 
-        if config is None:
-            self.config = self.default_config
-        else:
-            self._update_config(config)
+    def __getitem__(self, key):
+        return self.data.get(key)
+
+    def get(self, key, default=None):
+        return self.data.get(key, default)

@@ -11,15 +11,16 @@ import threading
 import queue
 from .GenericYolo.genericYolo import Box, Results, YoloWrapper
 from rknnlite.api import RKNNLite  # No error handling :)
-import VisionCoreConfig
+from VisionCoreConfig import VisionCoreConfig, VisionCoreCameraConfig
 
 class Camera:
     def __init__(
         self,
         camera_config: VisionCoreConfig,
-        config: VisionCoreConfig,
+        config: VisionCoreCameraConfig,
         core_mask=RKNNLite.NPU_CORE_0, # Eventually ill figure out how move into config
     ):
+        print(camera_config)
         self.logger = logging.getLogger(__name__)
         self.source = camera_config["source"]
 
@@ -31,7 +32,7 @@ class Camera:
             self.fov = camera_config["calibration"]["fov"]
             self.grayscale = True if camera_config["grayscale"] == "true" else False
             self.fps_cap = camera_config["fps_cap"]
-            self.subsystem = config["subsystem"]
+            self.subsystem = camera_config["subsystem"]
 
             # Focal length calc's (short for calculations)
             if camera_config.get("focal_length_pixels") is None:

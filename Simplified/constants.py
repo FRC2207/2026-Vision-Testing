@@ -1,6 +1,6 @@
 import numpy as np
 import json
-import VisionCoreConfig
+from VisionCoreConfig import VisionCoreConfig
 
 CONFIG = VisionCoreConfig("Simplified/config.json")
 

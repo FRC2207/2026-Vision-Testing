@@ -1,7 +1,7 @@
 import numpy as np
 from .CustomDBScan import CustomDBScan
 from .Fuel import Fuel  # adjust import path as needed
-import VisionCoreConfig
+from VisionCoreConfig import VisionCoreConfig
 
 class PathPlanner:
     def __init__(self, config: VisionCoreConfig):
