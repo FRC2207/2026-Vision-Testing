@@ -12,6 +12,7 @@ from Classes.Fuel import Fuel
 from Classes.FuelTracker import FuelTracker
 from Classes.Metrics import Metrics
 import signal
+from rknnlite.api import RKNNLite # No error handling :)
 
 shutdown_event = threading.Event()
 signal.signal(signal.SIGINT,  lambda sig, frame: shutdown_event.set())
@@ -27,24 +28,19 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 camera = Camera(
-    "/dev/video0",
-    constants.YOLO_MODEL_FILE,
-    constants.CAMERA_CONFIGS["Arducam"],
-    debug_mode=constants.DEBUG_MODE,
-    subsystem="field",
-    input_size=(constants.YOLO_INPUT_SIZE, constants.YOLO_INPUT_SIZE),
-    quantized=True,
-    unit=constants.UNIT
+    constants.CONFIG.camera_config("Arducam"),
+    constants.CONFIG,
+    RKNNLite.NPU_CORE_0_1,
 )
 
 metrics = Metrics()
 
-if constants.APP_MODE:
+if constants["app_mode"]:
     camera_app = CameraApp()
     threading.Thread(target=camera_app.run, daemon=True).start()
 
-if constants.USE_NETWORK_TABLES:
-    network_handler = NetworkTableHandler(constants.NETWORKTABLES_IP)
+if constants["use_network_tables"]:
+    network_handler = NetworkTableHandler(constants["network_tables_ip"])
 
 def numpy_to_fuel_list(fuel_positions: np.ndarray) -> list[Fuel]:
     return [Fuel(p[0], p[1]) for p in fuel_positions]
@@ -61,13 +57,8 @@ if __name__ == "__main__":
             fuel_list = []
             annotated_frame = None
 
-        planner = PathPlanner(
-            fuel_list,
-            constants.ELIPSON,
-            constants.MIN_SAMPLES,
-            constants.DEBUG_MODE
-        )
-        fuel_tracker = FuelTracker(fuel_list, constants.DISTANCE_THRESHOLD)
+        planner = PathPlanner(constants.CONFIG)
+        fuel_tracker = FuelTracker(constants.CONFIG)
 
         while not shutdown_event.is_set():
             start_time = time.perf_counter()
@@ -86,7 +77,7 @@ if __name__ == "__main__":
             fuel_list = fuel_tracker.update(fuel_list)
 
             flask_s = None
-            if constants.APP_MODE:
+            if constants["app_mode"]:
                 if annotated_frame is None:
                     logger.warning("Frame not returned from camera.run()")
                 else:
@@ -110,7 +101,7 @@ if __name__ == "__main__":
             noise_positions, fuel_list = planner.update_fuel_positions(fuel_list)
 
             network_s = None
-            if constants.USE_NETWORK_TABLES:
+            if constants["use_network_tables"]:
                 network_start = time.perf_counter()
                 network_handler.send_fuel_list(
                     fuel_list, "vision_data", "VisionData"

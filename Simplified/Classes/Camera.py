@@ -11,51 +11,33 @@ import threading
 import queue
 from .GenericYolo.genericYolo import Box, Results, YoloWrapper
 from rknnlite.api import RKNNLite  # No error handling :)
+import VisionCoreConfig
 
 class Camera:
-    # __slots__ = (
-    #     'source', 'camera_fov', 'known_calibration_distance', 'ball_d_inches',
-    #     'known_calibration_pixel_height', 'subsystem', 'margin', 'min_confidence',
-    #     'grayscale', 'yolo_model_file', 'camera_pitch_angle', 'camera_height',
-    #     'camera_x', 'camera_y', 'camera_bot_relative_yaw', 'debug_mode',
-    #     'ball_count', 'gui_available', 'logger', 'last_time', 'cap',
-    #     'focal_length_pixels', 'model', 'ret', 'frame',
-    #     'frame_lock', 'stopped',
-    # )
-
     def __init__(
         self,
-        source: int | str,
-        yolo_model_file: str,
-        camera_config: dict,
-        margin: int = 10,
-        min_confidence: float = 0.5,
-        debug_mode: bool = False,
-        subsystem: str = "field",
-        input_size: tuple[int, int] = (640, 640),
-        quantized: bool = True,
-        unit: str = "inch",
-        core_mask=RKNNLite.NPU_CORE_0_1_2,
+        camera_config: VisionCoreConfig,
+        config: VisionCoreConfig,
+        core_mask=RKNNLite.NPU_CORE_0, # Eventually ill figure out how move into config
     ):
         self.logger = logging.getLogger(__name__)
-        self.source = source
+        self.source = camera_config["source"]
 
         # Camera calibration stuff
         try:
             self.known_calibration_distance = camera_config["calibration"]["distance"]
             self.ball_d_inches = camera_config["calibration"]["game_piece_size"]
-            self.known_calibration_pixel_height = camera_config["calibration"][
-                "size"
-            ]
+            self.known_calibration_pixel_height = camera_config["calibration"]["size"]
             self.fov = camera_config["calibration"]["fov"]
             self.grayscale = True if camera_config["grayscale"] == "true" else False
             self.fps_cap = camera_config["fps_cap"]
+            self.subsystem = config["subsystem"]
 
             # Focal length calc's (short for calculations)
             if camera_config.get("focal_length_pixels") is None:
                 try:
                     self.logger.info(
-                        "No focal length in config, calculating from calibration data..."
+                        "No focal length in VisionCore config, calculating from calibration data..."
                     )
                     self.focal_length_pixels = (
                         self.known_calibration_pixel_height
@@ -92,16 +74,15 @@ class Camera:
         }
 
         # Yolo/RKNN vision stuff
-        self.margin = margin
-        self.min_confidence = min_confidence
-        self.yolo_model_file = yolo_model_file
-        self.input_size = input_size
-        self.quantized = quantized
-        self.core_mask = core_mask
+        self.margin = config["vision_model"].get("margin", 0)
+        self.min_confidence = config["vision_model"].get("min_conf", 0.5)
+        self.yolo_model_file = config["vision_model"]["file_path"]
+        self.input_size = config["vision_model"]["input_size"]
+        self.quantized = config["vision_model"].get("quantized", False)
 
-        self.unit = unit
-        self.debug_mode = debug_mode
-        self.subsystem = subsystem
+        self.core_mask = core_mask
+        self.unit = config["unit"]
+        self.debug_mode = config["debug_mode"]
 
         # self.logger.info(f"Camera object created with: {self.__dict__}")
 
@@ -117,17 +98,17 @@ class Camera:
         self.frame_timeout = 1.0 / max(self.fps_cap, 1)
 
         # The stuff below this handles all the camera/photo buffering, timing stuff thats really complex and hard to explain
-        if isinstance(source, str) and source.lower().endswith(
+        if isinstance(self.source, str) and self.source.lower().endswith(
             (".png", ".jpg", ".jpeg", ".bmp")
         ):
             self.is_image = True
-            self.image = cv2.imread(source)
+            self.image = cv2.imread(self.source)
             if self.image is None:
-                raise ValueError(f"Failed to read image {source}")
+                raise ValueError(f"Failed to read image {self.source}")
         else:
             # Assume itss a video file or webcam index
             self.is_image = False
-            self.cap = cv2.VideoCapture(source)
+            self.cap = cv2.VideoCapture(self.source)
             self.cap.set(
                 cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc("M", "J", "P", "G")
             )
@@ -135,13 +116,12 @@ class Camera:
 
             if not self.cap.isOpened():
                 self.logger.error(f"Cannot open source {self.source}")
-                raise ValueError(f"Cannot open source {source}.")
+                raise ValueError(f"Cannot open source {self.source}.")
 
             self.cap.set(cv2.CAP_PROP_FPS, self.fps_cap)
 
             self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 320)
             self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 320)
-        # time.sleep(0.5)
 
         self.model = YoloWrapper(
             self.yolo_model_file,
@@ -164,16 +144,12 @@ class Camera:
                 threading.Thread(target=self._preprocess_worker, daemon=True).start()
 
     def _reader(self):
-        # self.logger.info(f"self.stopped: {self.stopped}")
         while not self.stopped:
-            # self.logger.debug("Attempting to grab frame.")
             ret, frame = self.cap.read()
-            # self.logger.debug(f"Frame grabbed: {frame}")
             if not ret:
                 self.logger.warning(
                     f"Failed to retrieve frame from, attempting to continue: {self.source}"
                 )
-                # raise ValueError(f"Failed to retrieve frame from: {self.source}")
                 time.sleep(0.05)
                 continue
 

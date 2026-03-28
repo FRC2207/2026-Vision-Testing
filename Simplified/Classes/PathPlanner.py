@@ -1,14 +1,14 @@
 import numpy as np
 from .CustomDBScan import CustomDBScan
 from .Fuel import Fuel  # adjust import path as needed
+import VisionCoreConfig
 
 class PathPlanner:
-    def __init__(self, fuel_positions: list[Fuel], epsilon: int, min_samples: int, debug_mode: bool = False):
-        self.epsilon = epsilon
-        self.min_samples = min_samples
-        self.debug_mode = debug_mode
+    def __init__(self, config: VisionCoreConfig):
+        self.epsilon = config["dbscan"]["epsilon"]
+        self.min_samples = config["dbscan"]["min_samples"]
 
-        self.fuel_positions, self.noise_positions = self.dbscan(fuel_positions)
+        self.fuel_positions, self.noise_positions = self.dbscan([])
 
     def get_noise_positions(self) -> list[Fuel]:
         return self.noise_positions

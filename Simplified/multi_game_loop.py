@@ -31,26 +31,14 @@ logger = logging.getLogger(__name__)
 
 logger.info("Creating camera objects...")
 camera0 = Camera(
-    "/dev/video0",
-    constants.YOLO_MODEL_FILE,
-    constants.CAMERA_CONFIGS["Arducam"],
-    debug_mode=constants.DEBUG_MODE,
-    subsystem="field",
-    input_size=(constants.YOLO_INPUT_SIZE, constants.YOLO_INPUT_SIZE),
-    quantized=True,
-    unit=constants.UNIT,
+    constants.CONFIG.camera_config("Arducam"),
+    constants.CONFIG,
     core_mask=RKNNLite.NPU_CORE_0_1
 )
 
 camera1 = Camera(
-    "/dev/video2",
-    constants.YOLO_MODEL_FILE,
-    constants.CAMERA_CONFIGS["Microsoft Cinema"],
-    debug_mode=constants.DEBUG_MODE,
-    subsystem="hopper",
-    input_size=(constants.YOLO_INPUT_SIZE, constants.YOLO_INPUT_SIZE),
-    quantized=True,
-    unit=constants.UNIT,
+    constants.CONFIG.camera_config("Microsoft Cinema"),
+    constants.CONFIG,
     core_mask=RKNNLite.NPU_CORE_2
 )
 

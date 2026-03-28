@@ -1,10 +1,11 @@
 import numpy as np
 from .Fuel import Fuel
+import VisionCoreConfig
 
 class FuelTracker:
-    def __init__(self, fuel_list: list[Fuel] = None, distance_threshold: float = 0.127):
-        self.fuel_list = fuel_list if fuel_list is not None else []
-        self.distance_threshold = distance_threshold
+    def __init__(self, config: VisionCoreConfig):
+        self.fuel_list = []
+        self.distance_threshold = config["distance_threshold"]
 
     def update(self, new_fuel_list: list[Fuel]):
         for fuel in self.fuel_list:
