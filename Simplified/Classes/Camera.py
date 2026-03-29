@@ -30,7 +30,7 @@ class Camera:
             self.ball_d_inches = camera_config["calibration"]["game_piece_size"]
             self.known_calibration_pixel_height = camera_config["calibration"]["size"]
             self.fov = camera_config["calibration"]["fov"]
-            self.grayscale = True if camera_config["grayscale"] == "true" else False
+            self.grayscale = True if camera_config["grayscale"] == True else False
             self.fps_cap = camera_config["fps_cap"]
             self.subsystem = camera_config["subsystem"]
 

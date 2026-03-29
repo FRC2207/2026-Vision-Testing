@@ -12,6 +12,7 @@ from Classes.Fuel import Fuel
 from Classes.FuelTracker import FuelTracker
 from Classes.Metrics import Metrics
 import signal
+from Classes.HealthReporter import HealthReporter
 # from rknnlite.api import RKNNLite # No error handling :)
 
 shutdown_event = threading.Event()
@@ -38,11 +39,14 @@ metrics = Metrics()
 if constants.CONFIG["app_mode"]:
     camera_app = CameraApp()
     threading.Thread(target=camera_app.run, daemon=True).start()
+    health = HealthReporter(camera_app.app)
+    health.set_camera(camera)
 else:
     camera_app = None
 
 if constants.CONFIG["use_network_tables"]:
     network_handler = NetworkTableHandler(constants.CONFIG["network_tables_ip"])
+    health.set_network_handler(network_handler)
 else:
     network_handler = None
 
@@ -127,7 +131,10 @@ if __name__ == "__main__":
                 flask_s=flask_s,
                 network_s=network_s
             )
+
             metrics.tick()
+            if health:
+                health.tick(fps=1/loop_s, vision_s=vision_s, detections=len(fuel_list))
             logger.info(f"FPS: {1/loop_s:.1f}")
             print(f"\rFPS: {1/loop_s:.1f}      ", end="")
     finally:
