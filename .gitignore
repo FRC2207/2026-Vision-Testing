@@ -10,7 +10,6 @@ OfflineIntall
 kernel.errors.txt
 rknn_env/
 rknn-toolkit2/
-profile.prof
 ultralytics_env/
 YoloModelsBackup
-metrics.html
+Outputs/

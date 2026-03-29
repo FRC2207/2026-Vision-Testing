@@ -1,6 +1,5 @@
 Proper logging to network tables (system health stuff like fps, detection count, latency, and model confidence)
 Auto camera detection (instead of hard coding "Arducam" or "Lenovo Laptop")
-Flask "/health" endpoint
 Flask "/update" endpoint that triggers git pull and service restart
 First boot web wizard to sleect camera, positons, etc
 FULLY test multi camera fusion (subsystem, deduplicatoin, etc)

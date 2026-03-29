@@ -123,18 +123,23 @@ if __name__ == "__main__":
                 )
                 network_s = time.perf_counter() - network_start
 
+            if health:
+                health_start = time.perf_counter()
+                health.tick(fps=1/loop_s, vision_s=vision_s, detections=len(fuel_list))
+                health_s = time.perf_counter() - health_start
+
             loop_s = time.perf_counter() - start_time
             metrics.record(
                 loop_s=loop_s,
                 vision_s=vision_s,
                 camera_lag_s=camera_lag_s,
                 flask_s=flask_s,
-                network_s=network_s
+                network_s=network_s,
+                health_s=health_s
             )
 
             metrics.tick()
-            if health:
-                health.tick(fps=1/loop_s, vision_s=vision_s, detections=len(fuel_list))
+
             logger.info(f"FPS: {1/loop_s:.1f}")
             print(f"\rFPS: {1/loop_s:.1f}      ", end="")
     finally:

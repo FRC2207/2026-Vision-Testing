@@ -89,47 +89,85 @@ class HealthReporter:
 
         return payload, healthy
 
-    def _render_html(self, payload):
-        status_color = "ok" if payload["status"] == "ok" else "bad"
-
-        return f"""
+    def _render_html(self):
+        return """
         <html>
         <head>
             <title>System Health</title>
-            <meta http-equiv="refresh" content="1"> <!-- auto refresh -->
             <style>
-                body {{ font-family: Arial; background: #111; color: #eee; }}
-                .card {{ padding: 20px; margin: 20px; border-radius: 10px; background: #222; }}
-                .ok {{ color: #4caf50; }}
-                .bad {{ color: #f44336; }}
+                body { font-family: Arial; background: #111; color: #eee; }
+                .card { padding: 20px; margin: 20px; border-radius: 10px; background: #222; }
+                .ok { color: #4caf50; }
+                .bad { color: #f44336; font-weight: bold; }
             </style>
         </head>
         <body>
             <h1>System Health</h1>
 
             <div class="card">
-                <h2>Status: <span class="{status_color}">
-                    {payload["status"].upper()}
-                </span></h2>
+                <h2>Status: <span id="status_text"></span></h2>
 
-                <p><b>FPS:</b> {payload["fps"]}</p>
-                <p><b>Inference:</b> {payload["vision_ms"]} ms</p>
-                <p><b>Detections:</b> {payload["detections"]}</p>
-                <p><b>Loop stale:</b> {payload["loop_stale_s"]} s</p>
-                <p><b>Uptime:</b> {payload["uptime_s"]} s</p>
+                <p><b>FPS:</b> <span id="fps"></span></p>
+                <p><b>Inference:</b> <span id="vision"></span> ms</p>
+                <p><b>Detections:</b> <span id="detections"></span></p>
+                <p><b>Loop stale:</b> <span id="stale"></span> s</p>
+                <p><b>Uptime:</b> <span id="uptime"></span> s</p>
             </div>
 
             <div class="card">
                 <h3>Camera</h3>
-                <p>Status: {"OK" if payload["camera"]["ok"] else "BAD"}</p>
-                <p>Frame age: {payload["camera"]["frame_age_ms"]} ms</p>
+                <p>Status: <span id="camera_status"></span></p>
+                <p>Frame age: <span id="frame_age"></span> ms</p>
             </div>
 
             <div class="card">
                 <h3>NetworkTables</h3>
-                <p>Enabled: {payload["network_tables"]["enabled"]}</p>
-                <p>Connected: {payload["network_tables"]["connected"]}</p>
+                <p>Enabled: <span id="nt_enabled"></span></p>
+                <p>Connected: <span id="nt_connected"></span></p>
             </div>
+
+            <script>
+            async function updateHealth() {
+                try {
+                    const res = await fetch('/health', {
+                        headers: { 'Accept': 'application/json' }
+                    });
+
+                    const data = await res.json();
+
+                    // Main stats
+                    document.getElementById('fps').textContent = data.fps;
+                    document.getElementById('vision').textContent = data.vision_ms;
+                    document.getElementById('detections').textContent = data.detections;
+                    document.getElementById('stale').textContent = data.loop_stale_s;
+                    document.getElementById('uptime').textContent = data.uptime_s;
+
+                    // Status
+                    const statusEl = document.getElementById('status_text');
+                    statusEl.textContent = data.status.toUpperCase();
+                    statusEl.className = data.status === "ok" ? "ok" : "bad";
+
+                    // Camera
+                    document.getElementById('camera_status').textContent =
+                        data.camera.ok ? "OK" : "BAD";
+                    document.getElementById('frame_age').textContent =
+                        data.camera.frame_age_ms;
+
+                    // NetworkTables
+                    document.getElementById('nt_enabled').textContent =
+                        data.network_tables.enabled;
+                    document.getElementById('nt_connected').textContent =
+                        data.network_tables.connected;
+
+                } catch (e) {
+                    console.error("Health update failed", e);
+                }
+            }
+
+            setInterval(updateHealth, 250);
+
+            updateHealth();
+            </script>
         </body>
         </html>
         """
@@ -137,10 +175,9 @@ class HealthReporter:
     def _health_route(self):
         payload, healthy = self._build_payload()
 
-        # Browser is HTML, everything else is raw JSON
         wants_html = "text/html" in request.headers.get("Accept", "")
 
         if wants_html:
-            return Response(self._render_html(payload), mimetype="text/html")
+            return Response(self._render_html(), mimetype="text/html")
 
         return jsonify(payload), (200 if healthy else 503)
