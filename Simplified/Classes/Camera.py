@@ -10,7 +10,7 @@ from scipy.spatial.transform import Rotation
 import threading
 import queue
 from .GenericYolo.genericYolo import Box, Results, YoloWrapper
-from rknnlite.api import RKNNLite  # No error handling :)
+# from rknnlite.api import RKNNLite  # No error handling :)
 from VisionCoreConfig import VisionCoreConfig, VisionCoreCameraConfig
 
 class Camera:
@@ -18,9 +18,9 @@ class Camera:
         self,
         camera_config: VisionCoreConfig,
         config: VisionCoreCameraConfig,
-        core_mask=RKNNLite.NPU_CORE_0, # Eventually ill figure out how move into config
+        # core_mask=RKNNLite.NPU_CORE_0, # Eventually ill figure out how move into config
+        core_mask=None
     ):
-        print(camera_config)
         self.logger = logging.getLogger(__name__)
         self.source = camera_config["source"]
 

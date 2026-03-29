@@ -13,7 +13,7 @@ class VisionCoreConfig:
             "vision_model_file_path": "model.pt",
             "network_tables_ip": "10.22.7.2",
             "use_network_tables": True,
-            "app_mode": False,
+            "app_mode": True,
             "debug_mode": False,
             "camera_configs": {
                 "default": {
@@ -63,13 +63,20 @@ class VisionCoreConfig:
             self.logger.warning(f"Key path {keys} not found.")
             return None
 
-    def set(self, value, *keys):
-        if not keys: return
+    def set(self, *keys_and_value):
+        if len(keys_and_value) < 2:
+            return
+        
+        # The last argument is the value, everything before is the key path
+        keys = keys_and_value[:-1]
+        value = keys_and_value[-1]
         
         target = self.config
         for key in keys[:-1]:
-            # Ensure the path exists as a dictionary
-            target = target.setdefault(key, {})
+            if key not in target or not isinstance(target[key], dict):
+                target[key] = {}
+            target = target[key]
+            
         target[keys[-1]] = value
 
     def _update_config(self, data: dict, current_dict=None):
@@ -92,7 +99,10 @@ class VisionCoreConfig:
         return self.get(*keys)
     
     def __getattr__(self, item):
-        return self.get(item)
+        val = self.get(item)
+        if val is None:
+            raise AttributeError(f"No config attribute or key named '{item}'")
+        return val
     
 class VisionCoreCameraConfig:
     def __init__(self, config_dict: dict = None):

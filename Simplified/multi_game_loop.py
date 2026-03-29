@@ -12,7 +12,7 @@ from Classes.FuelTracker import FuelTracker
 from Classes.MultipleCameraHandler import MultipleCameraHandler
 from Classes.Metrics import Metrics
 import signal
-from rknnlite.api import RKNNLite
+# from rknnlite.api import RKNNLite
 import cv2
 import sys
 
@@ -33,13 +33,13 @@ logger.info("Creating camera objects...")
 camera0 = Camera(
     constants.CONFIG.camera_config("Arducam"),
     constants.CONFIG,
-    core_mask=RKNNLite.NPU_CORE_0_1
+    # core_mask=RKNNLite.NPU_CORE_0_1
 )
 
 camera1 = Camera(
     constants.CONFIG.camera_config("Microsoft Cinema"),
     constants.CONFIG,
-    core_mask=RKNNLite.NPU_CORE_2
+    # core_mask=RKNNLite.NPU_CORE_2
 )
 
 logger.info("Success!")

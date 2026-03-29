@@ -5,7 +5,7 @@ from VisionCoreConfig import VisionCoreConfig
 
 class PathPlanner:
     def __init__(self, config: VisionCoreConfig):
-        self.epsilon = config["dbscan"]["epsilon"]
+        self.epsilon = config["dbscan"]["elipson"]
         self.min_samples = config["dbscan"]["min_samples"]
 
         self.fuel_positions, self.noise_positions = self.dbscan([])

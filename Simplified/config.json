@@ -2,12 +2,12 @@
     "unit": "meter",
     "dbscan": {
         "elipson": 10,
-        "min_samples": 0
+        "min_samples": 1
     },
     "distance_threshold": -1,
     "network_tables_ip": "10.22.7.2",
-    "use_network_tables": true,
-    "app_mode": false,
+    "use_network_tables": false,
+    "app_mode": true,
     "debug_mode": false,
     "camera_configs": {
         "Arducam": {
@@ -25,7 +25,7 @@
                 "game_piece_size": 5.91,
                 "fov": 60
             },
-            "source": "/dev/video0",
+            "source": 0,
             "subsystem": "field"
         },
         "Microsoft Cinema": {
@@ -61,7 +61,7 @@
                 "game_piece_size": 5.91,
                 "fov": 74.9
             },
-            "source": "/dev/video0",
+            "source": 0,
             "subsystem": "field"
         },
         "Crappy Microsoft Webcam": {
@@ -85,9 +85,9 @@
     },
     "vision_model": {
         "quantized": true,
-        "file_path": "YoloModels/v26/nano/model.rknn",
+        "file_path": "YoloModels/v26/nano/color-3.1-v26_openvino_model",
         "input_size": [320, 320],
-        "margin": 10,
-        "min_conf": 0.6
+        "margin": 0,
+        "min_conf": 0.9
     }
 }
