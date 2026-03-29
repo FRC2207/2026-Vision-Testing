@@ -1,9 +1,10 @@
 import time
 import threading
+import VisionCoreConfig
 from flask import jsonify, Response, request
 
 class HealthReporter:
-    def __init__(self, flask_app):
+    def __init__(self, flask_app, config: VisionCoreConfig):
         self._lock = threading.Lock()
         self._camera = None
         self._network_handler = None
@@ -14,6 +15,7 @@ class HealthReporter:
         self._last_tick: float = time.perf_counter()
         self._uptime_start: float = time.perf_counter()
         self._loop_count: int = 0
+        self.stale_threshold = config.stale_threshold
 
         flask_app.add_url_rule("/health", "health", self._health_route)
 
@@ -51,7 +53,7 @@ class HealthReporter:
             try:
                 age = self._camera.get_frame_age()
                 frame_age_ms = round(age * 1000, 1)
-                camera_ok = age < 1.0
+                camera_ok = age < self.stale_threshold
             except Exception:
                 camera_ok = False
 
@@ -64,7 +66,7 @@ class HealthReporter:
                 nt_connected = False
 
         healthy = (
-            stale_s < 2.0
+            stale_s < self.stale_threshold
             and camera_ok
             and (nt_connected is None or nt_connected)
         )
@@ -99,6 +101,9 @@ class HealthReporter:
                 .card { padding: 20px; margin: 20px; border-radius: 10px; background: #222; }
                 .ok { color: #4caf50; }
                 .bad { color: #f44336; font-weight: bold; }
+                h1 {
+                    text-align: center;
+                }
             </style>
         </head>
         <body>

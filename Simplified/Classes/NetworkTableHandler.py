@@ -107,6 +107,31 @@ class NetworkTableHandler:
         except Exception as e:
             self.logger.error(f"Failed to send boolean: {e}")
 
+    def send_data(self, value: bool|int|float|str, data_name: str, table_name: str):
+        try:
+            if not self.inst.isConnected():
+                return
+
+            table = self._get_table(table_name)
+            pub_key = f"pub/{table_name}/{data_name}"
+            if pub_key not in self._subscribers:
+                if isinstance(value, bool):
+                    self._subscribers[pub_key] = table.getBooleanTopic(data_name).publish()
+                elif isinstance(value, (int, float)):
+                    self._subscribers[pub_key] = table.getDoubleTopic(data_name).publish()
+                elif isinstance(value, str):
+                    self._subscribers[pub_key] = table.getStringTopic(data_name).publish()
+                else:
+                    self.logger.error(f"Unsupported data type for {data_name}: {type(value)}")
+                    return
+            
+            self._subscribers[pub_key].set(value)
+            self.inst.flush()
+            
+            self.logger.info(f"Sent data for {data_name}: {value}")
+        except Exception as e:
+            self.logger.error(f"Failed to send data: {e}")
+
     def get_data(self, data_type, data_name: str, table_name: str):
         if not self.inst.isConnected():
             return [0.0, 0.0]
