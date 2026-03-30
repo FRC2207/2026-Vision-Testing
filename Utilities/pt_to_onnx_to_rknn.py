@@ -7,13 +7,13 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(me
 logger = logging.getLogger(__name__)
 
 MODELS = [
-    ("YoloModels/v26/nano/batchTesting/color-3.1-v26.pt", None)
+    ("YoloModels/v8_or_v11/gray-3.0.pt", None)
 ]
 
 INPUT_SIZE = (640, 640)
 TARGET_PLATFORM = "rk3588"
 QUANTIZE = True
-DATASET_TXT = "Images/RknnDataset/dataset.txt"
+DATASET_TXT = "Images/RknnDataset_grayscale/dataset.txt"
 
 def export_pt_to_onnx(pt_path: str, input_size: tuple) -> str:
     logger.info(f"Exporting {pt_path} → ONNX …")

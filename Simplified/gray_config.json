@@ -1,0 +1,58 @@
+{
+    "unit": "meter",
+    "dbscan": {
+        "elipson": 10,
+        "min_samples": 1
+    },
+    "distance_threshold": -1,
+    "network_tables_ip": "10.22.7.2",
+    "use_network_tables": false,
+    "app_mode": true,
+    "debug_mode": false,
+    "stale_theshold": 1,
+    "vision_model": {
+        "quantized": true,
+        "file_path": "YoloModels/v8_or_v11/gray-3.0.rknn",
+        "input_size": [320, 320],
+        "margin": 0,
+        "min_conf": 0.7
+    },
+    "camera_configs": {
+        "Arducam1": {
+            "name": "Arducam1",
+            "x": 6.6925,
+            "y": 14.1925,
+            "height": 8.125,
+            "pitch": 15,
+            "yaw": 90,
+            "grayscale": true,
+            "fps_cap": 60,
+            "calibration": {
+                "size": 266.9,
+                "distance": 12,
+                "game_piece_size": 5.91,
+                "fov": 60
+            },
+            "source": "https://photon1.local/stream1.mjpg",
+            "subsystem": "field"
+        },
+        "Arducam2": {
+            "name": "Arducam2",
+            "x": 7,
+            "y": -17.25,
+            "height": 8.125,
+            "pitch": 15,
+            "yaw": 90,
+            "grayscale": true,
+            "fps_cap": 60,
+            "calibration": {
+                "size": 266.9,
+                "distance": 12,
+                "game_piece_size": 5.91,
+                "fov": 60
+            },
+            "source": "https://photon1.local/stream2.mjpg",
+            "subsystem": "field"
+        }
+    }
+}
