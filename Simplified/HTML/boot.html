@@ -399,7 +399,7 @@
             <div class="field">
                 <label>Brightness</label>
                 <div class="slider-row">
-                    <input type="range" id="s-brightness" min="-64" max="64" value="0"
+                    <input type="range" id="s-brightness" min="-50" max="50" value="0"
                         oninput="document.getElementById('v-brightness').textContent=this.value; updateSetting('brightness',this.value)" />
                     <span id="v-brightness">0</span>
                 </div>
@@ -407,7 +407,7 @@
             <div class="field">
                 <label>Contrast</label>
                 <div class="slider-row">
-                    <input type="range" id="s-contrast" min="0" max="95" value="0"
+                    <input type="range" id="s-contrast" min="0" max="100" value="0"
                         oninput="document.getElementById('v-contrast').textContent=this.value; updateSetting('contrast',this.value)" />
                     <span id="v-contrast">0</span>
                 </div>
@@ -415,9 +415,9 @@
             <div class="field">
                 <label>Exposure</label>
                 <div class="slider-row">
-                    <input type="range" id="s-exposure" min="-13" max="0" value="-5"
+                    <input type="range" id="s-exposure" min="-10" max="10" value="0"
                         oninput="document.getElementById('v-exposure').textContent=this.value; updateSetting('exposure',this.value)" />
-                    <span id="v-exposure">-5</span>
+                    <span id="v-exposure">0</span>
                 </div>
             </div>
         </div>
@@ -595,11 +595,7 @@
                 subsystem: document.getElementById('f-subsystem').value,
                 brightness: parseFloat(document.getElementById('s-brightness').value),
                 contrast: parseFloat(document.getElementById('s-contrast').value),
-                exposure: parseFloat(document.getElementById('s-exposure').value),
-                cal_size: parseFloat(document.getElementById('f-cal-size').value),
-                cal_distance: parseFloat(document.getElementById('f-cal-distance').value),
-                cal_game_piece_size: parseFloat(document.getElementById('f-cal-gps').value),
-                cal_fov: parseFloat(document.getElementById('f-cal-fov').value),
+                exposure: parseFloat(document.getElementById('s-exposure').value)
             };
 
             // Replace if already exists
@@ -674,8 +670,9 @@
                 });
                 const data = await r.json();
                 if (data.ok) {
-                    showToast('config.json saved! Closing...');
-                    setTimeout(() => fetch('/api/shutdown', { method: 'POST' }), 1500);
+                    showToast('config.json saved!');
+                    btn.textContent = 'Saved';
+                    // setTimeout(() => fetch('/api/shutdown', { method: 'POST' }), 1500);
                 } else {
                     showToast('Save failed', true);
                     btn.disabled = false;

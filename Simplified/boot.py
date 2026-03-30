@@ -9,7 +9,7 @@ import logging
 
 logging.basicConfig(level=logging.INFO)
 
-CONFIG_FILE = Path("config.json")
+CONFIG_FILE = Path("Simplified/config.json")
 SHUTDOWN_FLAG = threading.Event()
 
 _captures: dict[int, cv2.VideoCapture] = {}
@@ -26,7 +26,6 @@ def release_all():
         for cap in _captures.values():
             cap.release()
         _captures.clear()
-
 
 def discover_cameras(max_index=8):
     devnull = open(os.devnull, "w")
@@ -62,7 +61,6 @@ def index():
 def api_cameras():
     return jsonify(discover_cameras())
 
-
 @app.route("/api/update_setting", methods=["POST"])
 def api_update_setting():
     data = request.get_json(force=True)
@@ -79,7 +77,6 @@ def api_update_setting():
         cap.set(cv2.CAP_PROP_EXPOSURE, float(data["exposure"]))
 
     return jsonify({"ok": True})
-
 
 @app.route("/api/save", methods=["POST"])
 def api_save():
@@ -112,7 +109,12 @@ def api_save():
         "camera_configs": camera_configs
     }
 
-    CONFIG_FILE.write_text(json.dumps(full_config, indent=4))
+    with open(CONFIG_FILE, "r") as f:
+        existing = json.load(f)
+
+    existing.update(full_config)
+
+    CONFIG_FILE.write_text(json.dumps(existing, indent=4))
     return jsonify({"ok": True, "path": str(CONFIG_FILE.resolve())})
 
 @app.route("/api/shutdown", methods=["POST"])
