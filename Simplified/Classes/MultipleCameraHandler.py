@@ -4,7 +4,6 @@ import numpy as np
 import logging
 import threading
 
-
 class MultipleCameraHandler:
     def __init__(self, cameras: list[Camera]):
         self.cameras = cameras

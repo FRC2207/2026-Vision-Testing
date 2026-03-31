@@ -14,7 +14,7 @@ from Classes.Metrics import Metrics
 import signal
 from Classes.HealthReporter import HealthReporter
 
-# from rknnlite.api import RKNNLite # No error handling :)
+from rknnlite.api import RKNNLite # No error handling :)
 
 shutdown_event = threading.Event()
 signal.signal(signal.SIGINT, lambda sig, frame: shutdown_event.set())
@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 camera = Camera(
     constants.CONFIG.camera_config("Leveno Laptop"),
     constants.CONFIG,
-    # RKNNLite.NPU_CORE_0_1,
+    RKNNLite.NPU_CORE_0_1,
 )
 
 metrics = Metrics()
@@ -63,7 +63,6 @@ def run_vision(camera):
     except Exception as e:
         logger.exception(f"Vision exception: {e}")
         return [], None
-
 
 if __name__ == "__main__":
     try:

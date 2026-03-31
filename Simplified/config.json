@@ -12,7 +12,7 @@
     "stale_theshold": 1,
     "vision_model": {
         "quantized": true,
-        "file_path": "YoloModels/v26/nano/color-3.1-v26_openvino_model",
+        "file_path": "YoloModels/v26/nano/model.rknn",
         "input_size": [320, 320],
         "margin": 0,
         "min_conf": 0.7
