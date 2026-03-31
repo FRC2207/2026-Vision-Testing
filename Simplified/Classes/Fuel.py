@@ -11,7 +11,7 @@ class Fuel:
         self.alive = 0
 
         self.destroyed = False
-        self.alive_time = 0.25
+        self.alive_time = 0
 
     def get_position(self):
         return np.array([self.x, self.y])

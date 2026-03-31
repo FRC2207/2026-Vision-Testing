@@ -4,23 +4,21 @@ import numpy as np
 import logging
 import threading
 
+
 class MultipleCameraHandler:
-    def __init__(self, cameras: list[Camera], vision_model_path: str):
+    def __init__(self, cameras: list[Camera]):
         self.cameras = cameras
         self.logger = logging.getLogger(__name__)
         self._stopped = False
 
-        # Per-camera state — each camera has its own lock and "fresh data" event
-        self._positions  = [np.empty((0, 2))] * len(cameras)
-        self._frames     = [None] * len(cameras)
-        self._locks      = [threading.Lock() for _ in cameras]
-        self._fresh      = [threading.Event() for _ in cameras]
+        self._positions = [np.empty((0, 2))] * len(cameras)
+        self._frames = [None] * len(cameras)
+        self._locks = [threading.Lock() for _ in cameras]
+        self._fresh = [threading.Event() for _ in cameras]
 
         for i, cam in enumerate(cameras):
             threading.Thread(
-                target=self._camera_loop,
-                args=(i, cam),
-                daemon=True
+                target=self._camera_loop, args=(i, cam), daemon=True
             ).start()
 
     def _camera_loop(self, i: int, camera: Camera):
@@ -28,7 +26,9 @@ class MultipleCameraHandler:
             try:
                 positions, frame = camera.run()
                 with self._locks[i]:
-                    self._positions[i] = positions if positions is not None else np.empty((0, 2))
+                    self._positions[i] = (
+                        positions if positions is not None else np.empty((0, 2))
+                    )
                     self._frames[i] = frame
                 self._fresh[i].set()  # signal: this camera has new data
             except Exception as e:
@@ -79,7 +79,9 @@ class MultipleCameraHandler:
         h, w = f.shape[:2]
         if w > display_width:
             scale = display_width / w
-            f = cv2.resize(f, (display_width, int(h * scale)), interpolation=cv2.INTER_AREA)
+            f = cv2.resize(
+                f, (display_width, int(h * scale)), interpolation=cv2.INTER_AREA
+            )
         return f
 
     def destroy(self):

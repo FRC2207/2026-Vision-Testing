@@ -6,7 +6,7 @@
     },
     "distance_threshold": -1,
     "network_tables_ip": "10.22.7.2",
-    "use_network_tables": false,
+    "use_network_tables": true,
     "app_mode": true,
     "debug_mode": false,
     "stale_theshold": 1,
@@ -15,13 +15,13 @@
         "file_path": "YoloModels/v8_or_v11/gray-3.0.rknn",
         "input_size": [320, 320],
         "margin": 0,
-        "min_conf": 0.7
+        "min_conf": 0.6
     },
     "camera_configs": {
         "Arducam1": {
             "name": "Arducam1",
-            "x": 6.6925,
-            "y": 14.1925,
+            "x": -14.1925,
+            "y": 6.6925,
             "height": 8.125,
             "pitch": 15,
             "yaw": 90,
@@ -38,8 +38,8 @@
         },
         "Arducam2": {
             "name": "Arducam2",
-            "x": 7,
-            "y": -17.25,
+            "x": 12.25,
+            "y": 7,
             "height": 8.125,
             "pitch": 15,
             "yaw": 90,

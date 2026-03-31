@@ -5,7 +5,7 @@ from VisionCoreConfig import VisionCoreConfig
 CONFIG = VisionCoreConfig("Simplified/config.json")
 GRAY_CONFIG = VisionCoreConfig("Simplified/gray_config.json")
 
-MODE = "debug"
+MODE = "game"
 # "game" for game
 # "test" for testing with robot or sim (change network tables IP)
 # "debug" for home stuff
