@@ -114,8 +114,9 @@ class Camera:
             self.cap = cv2.VideoCapture(self.source)
             self.cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'))
 
-            # device = self.source if isinstance(self.source, str) else f"/dev/video{self.source}"
-            # subprocess.run(["v4l2-ctl", "-d", device, "--set-ctrl=white_balance_automatic=1"], capture_output=True)
+            device = self.source if isinstance(self.source, str) else f"/dev/video{self.source}"
+            subprocess.run(["v4l2-ctl", "-d", device, "--set-ctrl=white_balance_automatic=1"], capture_output=True) # Auto white balance
+            subprocess.run(["v4l2-ctl", "-d", device, "-c", "auto_exposure=3"], capture_output=True) # Auto exposure
             self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
 
             if not self.cap.isOpened():
