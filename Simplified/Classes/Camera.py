@@ -1,6 +1,7 @@
 import cv2
 import math
 import numpy as np
+from torch import device
 from ultralytics import YOLO
 import time
 import os
@@ -12,6 +13,7 @@ import queue
 from .GenericYolo.genericYolo import Box, Results, YoloWrapper
 from rknnlite.api import RKNNLite  # No error handling :)
 from VisionCoreConfig import VisionCoreConfig, VisionCoreCameraConfig
+import subprocess
 
 class Camera:
     def __init__(
@@ -110,9 +112,10 @@ class Camera:
             # Assume itss a video file or webcam index
             self.is_image = False
             self.cap = cv2.VideoCapture(self.source)
-            self.cap.set(
-                cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc("M", "J", "P", "G")
-            )
+            self.cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'))
+
+            # device = self.source if isinstance(self.source, str) else f"/dev/video{self.source}"
+            # subprocess.run(["v4l2-ctl", "-d", device, "--set-ctrl=white_balance_automatic=1"], capture_output=True)
             self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
 
             if not self.cap.isOpened():
@@ -424,31 +427,15 @@ class Camera:
     def get_subsystem(self):
         return self.subsystem
 
-    def _pixel_to_robot_coordinates(
-        self,
-        pixel_x: float,
-        pixel_y: float,
-        distance_los: float,
-        img_w: int,
-        img_h: int,
-    ) -> np.ndarray | None:
-        # I have no clue if this math is actually right, but the tests say yes
-        # Its partly vibe coded but I reviewed it but also im failing my precalc class so idk
+    def _pixel_to_robot_coordinates(self, pixel_x, pixel_y, distance_los, img_w, img_h):
         pixel_offset_x = pixel_x - (img_w / 2.0)
         horizontal_angle_rad = math.atan(pixel_offset_x / self.focal_length_pixels)
 
-        # Apply pitch correction properly
-        pitch_rad = math.radians(self.camera_pitch_angle)
-        if self.camera_height > 0:
-            # Use pitch to find true ground distance
-            angle_to_ground = math.asin(
-                min(1.0, self.camera_height / max(distance_los, 1e-6))
-            ) - pitch_rad
-            true_horizontal_distance = self.camera_height / math.tan(
-                max(angle_to_ground, 1e-6)
-            )
+        # distance_los is true 3D distance from apparent size — just project to ground
+        if self.camera_height > 0 and distance_los > self.camera_height:
+            true_horizontal_distance = math.sqrt(distance_los**2 - self.camera_height**2)
         else:
-            true_horizontal_distance = distance_los * math.cos(pitch_rad)
+            true_horizontal_distance = distance_los * math.cos(math.radians(self.camera_pitch_angle))
 
         left_right_distance = true_horizontal_distance * math.sin(horizontal_angle_rad)
         forward_distance    = true_horizontal_distance * math.cos(horizontal_angle_rad)
@@ -461,7 +448,6 @@ class Camera:
         y_rotated = forward_distance * sin_yaw - left_right_distance * cos_yaw
 
         if self.unit not in self.conversions:
-            self.logger.warning(f"Unknown unit: {self.unit}, defaulting to meter")
             self.unit = "meter"
         scale = self.conversions[self.unit]
 

@@ -47,8 +47,8 @@ class NetworkTableHandler:
             if not self.inst.isConnected():
                 return Pose2d()
 
-            table_name = "AdvantageScope/RealOutputs/Odometry"
-            data_name = "RobotPose"
+            table_name = "AdvantageKit/RealOutputs/Odometry"
+            data_name = "Robot"
             sub_key = f"{table_name}/{data_name}"
 
             if sub_key not in self._subscribers:

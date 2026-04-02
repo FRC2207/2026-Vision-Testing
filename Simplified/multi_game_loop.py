@@ -44,14 +44,14 @@ camera1 = Camera(
 logger.info("Camera objects created.")
 
 metrics = Metrics()
-camera_handler = MultipleCameraHandler([camera0, camera1], constants.CONFIG)
+camera_handler = MultipleCameraHandler([camera0, camera1])
 
 camera_app = None
 health = None
 if constants.CONFIG["app_mode"]:
     camera_app = CameraApp()
     threading.Thread(target=camera_app.run, daemon=True).start()
-    health = HealthReporter(camera_app.app)
+    health = HealthReporter(camera_app.app, constants.CONFIG)
     health.set_camera(camera0)  # Report primary camera for health
 
 network_handler = None
@@ -60,19 +60,16 @@ if constants.CONFIG["use_network_tables"]:
     if health:
         health.set_network_handler(network_handler)
 
-
 def numpy_to_fuel_list(fuel_positions: np.ndarray) -> list[Fuel]:
     return [Fuel(p[0], p[1]) for p in fuel_positions]
 
-
 def run_vision(camera_handler) -> tuple[list[Fuel], any]:
     try:
-        raw_fuel_positions, combined_frame = camera_handler.predict()
-        return numpy_to_fuel_list(raw_fuel_positions), combined_frame
+        raw_fuel_positions = camera_handler.predict()
+        return numpy_to_fuel_list(raw_fuel_positions), camera_handler.get_combined_frame()
     except Exception as e:
         logger.exception(f"Vision exception: {e}")
         return [], None
-
 
 if __name__ == "__main__":
     try:
@@ -132,6 +129,7 @@ if __name__ == "__main__":
             if constants.CONFIG["use_network_tables"]:
                 network_start = time.perf_counter()
                 network_handler.send_fuel_list(fuel_list, "vision_data", "VisionData")
+                loop_s = time.perf_counter() - start_time
                 network_handler.send_data(1 / loop_s, "fps", "VisionData")
                 network_handler.send_data(len(fuel_list), "num_detections", "VisionData")
                 network_handler.send_data(camera_lag_s, "camera_lag", "VisionData")
@@ -139,7 +137,7 @@ if __name__ == "__main__":
                 for camera in camera_handler.cameras:
                     data = camera.get_data_for_subsytem("hopper")
                     if data is not None:
-                        network_handler.send_boolean(data, "has_fuel", "VisionData")
+                        network_handler.send_boolean(data, "hopper_sees_object", "VisionData")
 
                 network_s = time.perf_counter() - network_start
 

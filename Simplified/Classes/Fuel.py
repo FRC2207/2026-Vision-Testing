@@ -11,7 +11,11 @@ class Fuel:
         self.alive = 0
 
         self.destroyed = False
-        self.alive_time = 0
+        self.alive_time = 0.2
+
+    def relative_to(self, robot):
+        self.x += robot[0]
+        self.y += robot[1]
 
     def get_position(self):
         return np.array([self.x, self.y])

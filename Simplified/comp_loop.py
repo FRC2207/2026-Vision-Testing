@@ -43,7 +43,7 @@ camera1 = Camera(
 )
 
 camera2 = Camera(
-    constants.CONFIG.camera_config("Adrucam"),
+    constants.CONFIG.camera_config("Arducam"),
     constants.CONFIG,
     # core_mask=RKNNLite.NPU_CORE_2
 )
@@ -58,7 +58,7 @@ health = None
 if constants.CONFIG["app_mode"]:
     camera_app = CameraApp()
     threading.Thread(target=camera_app.run, daemon=True).start()
-    health = HealthReporter(camera_app.app)
+    health = HealthReporter(camera_app.app, constants.CONFIG)
     health.set_camera(camera0)  # Report primary camera for health
 
 network_handler = None
@@ -72,8 +72,8 @@ def numpy_to_fuel_list(fuel_positions: np.ndarray) -> list[Fuel]:
 
 def run_vision(camera_handler) -> tuple[list[Fuel], any]:
     try:
-        raw_fuel_positions, combined_frame = camera_handler.predict()
-        return numpy_to_fuel_list(raw_fuel_positions), combined_frame
+        raw_fuel_positions = camera_handler.predict()
+        return numpy_to_fuel_list(raw_fuel_positions), camera_handler.get_combined_frame()
     except Exception as e:
         logger.exception(f"Vision exception: {e}")
         return [], None
@@ -136,6 +136,7 @@ if __name__ == "__main__":
             if constants.CONFIG["use_network_tables"]:
                 network_start = time.perf_counter()
                 network_handler.send_fuel_list(fuel_list, "vision_data", "VisionData")
+                loop_s = time.perf_counter() - start_time
                 network_handler.send_data(1 / loop_s, "fps", "VisionData")
                 network_handler.send_data(len(fuel_list), "num_detections", "VisionData")
                 network_handler.send_data(camera_lag_s, "camera_lag", "VisionData")
@@ -143,7 +144,7 @@ if __name__ == "__main__":
                 for camera in camera_handler.cameras:
                     data = camera.get_data_for_subsytem("hopper")
                     if data is not None:
-                        network_handler.send_boolean(data, "has_fuel", "VisionData")
+                        network_handler.send_boolean(data, "hopper_sees_object", "VisionData")
 
                 network_s = time.perf_counter() - network_start
 

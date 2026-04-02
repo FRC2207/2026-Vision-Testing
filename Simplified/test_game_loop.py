@@ -115,5 +115,6 @@ if __name__ == "__main__":
         ]
 
         network_handler.send_fuel_list(fuel_list, "vision_data", "VisionData")
+        print("\rSent fuel list with {} balls.".format(len(fuel_list)), end="")
 
         time.sleep(0.02)

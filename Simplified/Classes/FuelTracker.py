@@ -1,26 +1,26 @@
 import numpy as np
 from .Fuel import Fuel
-import VisionCoreConfig
+from VisionCoreConfig import VisionCoreConfig
 
 class FuelTracker:
     def __init__(self, config: VisionCoreConfig):
         self.fuel_list = []
         self.distance_threshold = config["distance_threshold"]
 
-    def update(self, new_fuel_list: list[Fuel], robot_pose: np.ndarray):
+    def update(self, new_fuel_list: list[Fuel], robot_pose):
         # Tick down timers and prune dead fuels
-        for fuel in self.fuel_list:
-            fuel.update()
-        self.fuel_list = [f for f in self.fuel_list if not f.destroyed]
+        # for fuel in self.fuel_list:
+        #     fuel.update()
+        # self.fuel_list = [f for f in self.fuel_list if not f.destroyed]
 
         # Convert new detections from robot relative to field relative, then merge
         field_relative_fuels = []
         for fuel in new_fuel_list:
-            fuel.x += robot_pose[0]
-            fuel.y += robot_pose[1]
+            fuel.relative_to(robot_pose)
             field_relative_fuels.append(fuel)
 
-        self.add_fuel_list(field_relative_fuels)
+        self.fuel_list = field_relative_fuels
+        # self.add_fuel_list(field_relative_fuels)
         return self.fuel_list
 
     def add_fuel_list(self, fuels: list[Fuel]):

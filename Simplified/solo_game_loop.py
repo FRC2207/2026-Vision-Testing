@@ -30,9 +30,9 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 camera = Camera(
-    constants.CONFIG.camera_config("Leveno Laptop"),
+    constants.CONFIG.camera_config("Arducam"),
     constants.CONFIG,
-    RKNNLite.NPU_CORE_0_1,
+    RKNNLite.NPU_CORE_0_1_2,
 )
 
 metrics = Metrics()
@@ -42,7 +42,7 @@ health = None
 if constants.CONFIG["app_mode"]:
     camera_app = CameraApp()
     threading.Thread(target=camera_app.run, daemon=True).start()
-    health = HealthReporter(camera_app.app)
+    health = HealthReporter(camera_app.app, constants.CONFIG)
     health.set_camera(camera)
 
 network_handler = None
@@ -51,10 +51,8 @@ if constants.CONFIG["use_network_tables"]:
     if health:
         health.set_network_handler(network_handler)
 
-
 def numpy_to_fuel_list(fuel_positions: np.ndarray) -> list[Fuel]:
     return [Fuel(p[0], p[1]) for p in fuel_positions]
-
 
 def run_vision(camera):
     try:
@@ -83,11 +81,12 @@ if __name__ == "__main__":
 
             if network_handler:
                 robot_pose = network_handler.get_robot_pose()
+                # In inches convert to meters
                 robot_x = robot_pose.X()
                 robot_y = robot_pose.Y()
-                fuel_list = fuel_tracker.update(fuel_list, np.array([robot_x, robot_y]))
+                fuel_list = fuel_tracker.update(fuel_list, [robot_x, robot_y])
             else:
-                fuel_list = fuel_tracker.update(fuel_list, np.array([0, 0]))
+                fuel_list = fuel_tracker.update(fuel_list, [0, 0])
 
             flask_s = None
             if constants.CONFIG["app_mode"]:
@@ -117,6 +116,7 @@ if __name__ == "__main__":
             if constants.CONFIG["use_network_tables"]:
                 network_start = time.perf_counter()
                 network_handler.send_fuel_list(fuel_list, "vision_data", "VisionData")
+                loop_s = time.perf_counter() - start_time
                 network_handler.send_data(1 / loop_s, "fps", "VisionData")
                 network_handler.send_data(
                     len(fuel_list), "num_detections", "VisionData"

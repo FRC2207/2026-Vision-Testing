@@ -9,7 +9,7 @@
     "use_network_tables": true,
     "app_mode": true,
     "debug_mode": false,
-    "stale_theshold": 1,
+    "stale_threshold": 1,
     "vision_model": {
         "quantized": true,
         "file_path": "YoloModels/v8_or_v11/gray-3.0.rknn",

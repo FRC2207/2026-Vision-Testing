@@ -11,8 +11,8 @@ MODE = "game"
 # "debug" for home stuff
 
 if MODE == "game":
-    CONFIG.set("debug_mode", False)
-    CONFIG.set("app_mode", False)
+    CONFIG.set("debug_mode", True)
+    CONFIG.set("app_mode", True)
     CONFIG.set("use_network_tables", True)
     CONFIG.set("network_tables_ip", "10.22.7.2")
 

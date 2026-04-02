@@ -9,7 +9,7 @@
     "use_network_tables": false,
     "app_mode": true,
     "debug_mode": false,
-    "stale_theshold": 1,
+    "stale_threshold": 1,
     "vision_model": {
         "quantized": true,
         "file_path": "YoloModels/v26/nano/model.rknn",
@@ -20,18 +20,18 @@
     "camera_configs": {
         "Arducam": {
             "name": "Arducam",
-            "x": -14.1925,
-            "y": 6.6925,
-            "height": 8.125,
+            "x": 15.098,
+            "y": 9,
+            "height": 7.9,
             "pitch": 15,
-            "yaw": 90,
+            "yaw": 0,
             "grayscale": false,
-            "fps_cap": 30,
+            "fps_cap": 90,
             "calibration": {
                 "size": 266.9,
                 "distance": 12,
                 "game_piece_size": 5.91,
-                "fov": 60
+                "fov": 70
             },
             "source": 0,
             "subsystem": "field"

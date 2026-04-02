@@ -1,2 +1,10 @@
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 .\ultralytics_env\Scripts\activate
+v4l2-ctl --all
+
+CLEAR STATE
+sudo modprobe -r uvcvideo
+sudo modprobe uvcvideo
+SET AUTOMATIC THINGIES
+v4l2-ctl --set-ctrl=white_balance_automatic=1
+v4l2-ctl --set-ctrl=exposure_auto=3
