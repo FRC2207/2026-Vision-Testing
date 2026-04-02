@@ -111,22 +111,26 @@ class Camera:
         else:
             # Assume itss a video file or webcam index
             self.is_image = False
-            self.cap = cv2.VideoCapture(self.source)
-            self.cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'))
 
             device = self.source if isinstance(self.source, str) else f"/dev/video{self.source}"
-            subprocess.run(["v4l2-ctl", "-d", device, "--set-ctrl=white_balance_automatic=1"], capture_output=True) # Auto white balance
-            subprocess.run(["v4l2-ctl", "-d", device, "-c", "auto_exposure=3"], capture_output=True) # Auto exposure
-            self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+            subprocess.run(["v4l2-ctl", "-d", device, "-c", "white_balance_automatic=0"], capture_output=True)
+            subprocess.run(["v4l2-ctl", "-d", device, "-c", "white_balance_temperature=4600"], capture_output=True)
+            time.sleep(0.2) # Delay
+            subprocess.run(["v4l2-ctl", "-d", device, "-c", "white_balance_automatic=1"], capture_output=True)
+            subprocess.run(["v4l2-ctl", "-d", device, "-c", "auto_exposure=3"], capture_output=True)
+
+            self.cap = cv2.VideoCapture(self.source)
 
             if not self.cap.isOpened():
                 self.logger.error(f"Cannot open source {self.source}")
                 raise ValueError(f"Cannot open source {self.source}.")
-
+            
+            self.cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'))
             self.cap.set(cv2.CAP_PROP_FPS, self.fps_cap)
 
-            self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 320)
-            self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 320)
+            self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, config["vision_model"]["input_size"][0])
+            self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, config["vision_model"]["input_size"][1])
+            self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
 
         self.model = YoloWrapper(
             self.yolo_model_file,
