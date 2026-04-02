@@ -8,3 +8,14 @@ sudo modprobe uvcvideo
 SET AUTOMATIC THINGIES
 v4l2-ctl --set-ctrl=white_balance_automatic=1
 v4l2-ctl --set-ctrl=exposure_auto=3
+
+v4l2-ctl -d /dev/video0 -c white_balance_automatic=0
+v4l2-ctl -d /dev/video0 -c white_balance_automatic=1
+
+# Force Auto Exposure to reset (1 is manual, then 3 is auto)
+v4l2-ctl -d /dev/video0 -c auto_exposure=1
+v4l2-ctl -d /dev/video0 -c auto_exposure=3
+
+# Reset Gamma and Gain to mid-range defaults
+v4l2-ctl -d /dev/video0 -c gamma=100
+v4l2-ctl -d /dev/video0 -c gain=0
