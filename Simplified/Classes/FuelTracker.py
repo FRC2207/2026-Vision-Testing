@@ -7,7 +7,7 @@ class FuelTracker:
         self.fuel_list = []
         self.distance_threshold = config["distance_threshold"]
 
-    def update(self, new_fuel_list: list[Fuel], robot_pose):
+    def update(self, new_fuel_list: list[Fuel], robot_x, robot_y, robot_yaw) -> list[Fuel]:
         # Tick down timers and prune dead fuels
         # for fuel in self.fuel_list:
         #     fuel.update()
@@ -16,7 +16,7 @@ class FuelTracker:
         # Convert new detections from robot relative to field relative, then merge
         field_relative_fuels = []
         for fuel in new_fuel_list:
-            fuel.relative_to(robot_pose)
+            fuel.relative_to(robot_x, robot_y, robot_yaw)
             field_relative_fuels.append(fuel)
 
         self.fuel_list = field_relative_fuels

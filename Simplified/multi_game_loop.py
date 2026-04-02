@@ -95,11 +95,14 @@ if __name__ == "__main__":
 
             if network_handler:
                 robot_pose = network_handler.get_robot_pose()
-                robot_x = robot_pose.X()
-                robot_y = robot_pose.Y()
-                fuel_list = fuel_tracker.update(fuel_list, np.array([robot_x, robot_y]))
+                fuel_list = fuel_tracker.update(
+                    fuel_list, 
+                    robot_pose.X(), 
+                    robot_pose.Y(), 
+                    robot_pose.rotation().radians()
+                )
             else:
-                fuel_list = fuel_tracker.update(fuel_list, np.array([0, 0]))
+                fuel_list = fuel_tracker.update(fuel_list, 0, 0, 0)
 
             flask_s = None
             if constants.CONFIG["app_mode"]:

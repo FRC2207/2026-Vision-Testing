@@ -13,9 +13,13 @@ class Fuel:
         self.destroyed = False
         self.alive_time = 0.2
 
-    def relative_to(self, robot):
-        self.x += robot[0]
-        self.y += robot[1]
+    def relative_to(self, robot_x, robot_y, robot_yaw_rad):
+        cos_yaw = math.cos(robot_yaw_rad)
+        sin_yaw = math.sin(robot_yaw_rad)
+        field_x = cos_yaw * self.x - sin_yaw * self.y
+        field_y = sin_yaw * self.x + cos_yaw * self.y
+        self.x = field_x + robot_x
+        self.y = field_y + robot_y
 
     def get_position(self):
         return np.array([self.x, self.y])
