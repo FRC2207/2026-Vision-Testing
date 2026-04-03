@@ -111,32 +111,39 @@ class Camera:
         else:
             # Assume itss a video file or webcam index
             self.is_image = False
-            self.cap = cv2.VideoCapture(self.source)
-
-            ### FALLBACK FOR COMP IF NO ONE WILL LET ME GET HANDS ON THE BOT, THIS ONE 100% WORKS JUTS SUPER SLOW
-            # self.cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc('Y', 'U', 'Y', 'V'))
-
             device = self.source if isinstance(self.source, str) else f"/dev/video{self.source}"
-            subprocess.run(["v4l2-ctl", "-d", device, "-c", "auto_exposure=3"], capture_output=True)
-            result = subprocess.run(["v4l2-ctl", "-d", device, "-c", "white_balance_automatic=1"], capture_output=True)
-            if result.returncode != 0:
-                self.logger.warning(f"v4l2-ctl white balance failed for {device}: {result.stderr.decode()}")
-            
-            self.cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'))
 
-            ### GSTREAMER TESTS THIS PROBALY WONT WORK BECAUSE OF MY ORANGE PI IMAGE IS SUPER LIGHT
-            # pipeline = (
-            #     f"v4l2src device={device} !"
-            #     f"image/jpeg,width={config['vision_model']['input_size'][0]},height={config['vision_model']['input_size'][1]} !"
-            #     f"jpegdec ! videoconvert ! appsink"
-            # )
-            # self.cap = cv2.VideoCapture(pipeline, cv2.CAP_GSTREAMER)
+            # 1. OPEN FIRST
+            self.cap = cv2.VideoCapture(self.source, cv2.CAP_V4L2)
 
-            # This code doesn't break the code, so don't change
-            self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, config["vision_model"]["input_size"][0])
-            self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, config["vision_model"]["input_size"][1])
-            self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-            self.cap.set(cv2.CAP_PROP_FPS, self.fps_cap)
+            if not self.cap.isOpened():
+                raise ValueError("Camera failed to open")
+
+            # 2. HARD RESET STREAM (important for reboot stability)
+            for _ in range(10):
+                self.cap.grab()
+
+            # 3. APPLY V4L2 FORMAT FIRST (THIS IS KEY FIX)
+            subprocess.run([
+                "v4l2-ctl", "-d", device,
+                "--set-fmt-video=width=320,height=320,pixelformat=MJPG"
+            ], capture_output=True)
+
+            # 4. WAIT FOR DRIVER TO APPLY IT
+            time.sleep(0.15)
+
+            # 5. NOW LOCK OPENCV SIDE
+            self.cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
+            self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 320)
+            self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 320)
+
+            # 6. FINAL FLUSH (THIS IS WHAT FIXES PINK AFTER REBOOT)
+            for _ in range(20):
+                self.cap.grab()
+
+            # 7. VERIFY (IMPORTANT)
+            fmt = self.cap.get(cv2.CAP_PROP_FOURCC)
+            print("FOURCC:", fmt)
 
             if not self.cap.isOpened():
                 self.logger.error(f"Cannot open source {self.source}")
