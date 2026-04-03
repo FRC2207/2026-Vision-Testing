@@ -111,26 +111,36 @@ class Camera:
         else:
             # Assume itss a video file or webcam index
             self.is_image = False
+            self.cap = cv2.VideoCapture(self.source)
+
+            ### FALLBACK FOR COMP IF NO ONE WILL LET ME GET HANDS ON THE BOT, THIS ONE 100% WORKS JUTS SUPER SLOW
+            # self.cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc('Y', 'U', 'Y', 'V'))
 
             device = self.source if isinstance(self.source, str) else f"/dev/video{self.source}"
-            subprocess.run(["v4l2-ctl", "-d", device, "-c", "white_balance_automatic=0"], capture_output=True)
-            subprocess.run(["v4l2-ctl", "-d", device, "-c", "white_balance_temperature=4600"], capture_output=True)
-            time.sleep(0.2) # Delay
-            subprocess.run(["v4l2-ctl", "-d", device, "-c", "white_balance_automatic=1"], capture_output=True)
             subprocess.run(["v4l2-ctl", "-d", device, "-c", "auto_exposure=3"], capture_output=True)
+            result = subprocess.run(["v4l2-ctl", "-d", device, "-c", "white_balance_automatic=1"], capture_output=True)
+            if result.returncode != 0:
+                self.logger.warning(f"v4l2-ctl white balance failed for {device}: {result.stderr.decode()}")
+            
+            self.cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'))
 
-            self.cap = cv2.VideoCapture(self.source)
+            ### GSTREAMER TESTS THIS PROBALY WONT WORK BECAUSE OF MY ORANGE PI IMAGE IS SUPER LIGHT
+            # pipeline = (
+            #     f"v4l2src device={device} !"
+            #     f"image/jpeg,width={config['vision_model']['input_size'][0]},height={config['vision_model']['input_size'][1]} !"
+            #     f"jpegdec ! videoconvert ! appsink"
+            # )
+            # self.cap = cv2.VideoCapture(pipeline, cv2.CAP_GSTREAMER)
+
+            # This code doesn't break the code, so don't change
+            self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, config["vision_model"]["input_size"][0])
+            self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, config["vision_model"]["input_size"][1])
+            self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+            self.cap.set(cv2.CAP_PROP_FPS, self.fps_cap)
 
             if not self.cap.isOpened():
                 self.logger.error(f"Cannot open source {self.source}")
                 raise ValueError(f"Cannot open source {self.source}.")
-            
-            self.cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'))
-            self.cap.set(cv2.CAP_PROP_FPS, self.fps_cap)
-
-            self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, config["vision_model"]["input_size"][0])
-            self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, config["vision_model"]["input_size"][1])
-            self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
 
         self.model = YoloWrapper(
             self.yolo_model_file,

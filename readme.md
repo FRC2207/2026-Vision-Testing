@@ -15,80 +15,94 @@ So everything needs a little cleanup and stuff but the simplfied folder should b
 
 ## Folders
 
-### COMPLEX
+# 2026 Vision Testing
 
-The complex folder does a lot more then simplified. It finds the fuel and makes the path. This might be used idk
+okay so this repo is kinda messy but it works. i'm leaving notes here so anyone (including future me) doesn't cry when stuff breaks.
 
-#### Classes
+basically: the "simplified" folder just finds fuel and sends positions over network tables. the "complex" one does that plus plotting, path stuff, and other nerdy things.
 
-- **Camera.py**: Lets you setup a robot camera with lots and lots of paramters
-- **CustomDBScan.py**: Setups a custom dbscan for filtering of points
-- **NetworkTableHandler.py**: Lets you send data over network tables and stuff
-- **PathPlanner.py**: Main file to get points and stuff. This is way smaller then the complex path planner file
+### what the important scripts do (quick and lazy version)
 
-#### Other Files
+- video_feed_broadcaster.py — makes a tiny Flask site for the camera livestream
+- yolo_with_cam.py — runs the chosen YOLO model on a camera (default id 0)
+- pt_to_wtv.py — converts a .pt model to other formats (onnx, xml, etc)
+- map_maker.py — interactive window to draw a fuel map
+- map_creator.py — uses the model + math to make a birdseye view from images in `Images/`
+- camera_calibration.py — run this to get focal length-ish constants. follow the prompts, measure stuff, then paste the results into `focal_calibration_data.txt`. average the "known_calibration_pixel_height" values.
+- livestream_reader.py — reads frames from a livestream using the Camera class
+- onnx_to_rknn.py — super annoying conversion script that finally made an `.rknn` file (took a while)
 
-- **game_loop.py**: Lets you run one camera for the game loop, works (probaly)
+## folders (tl;dr)
 
-### SIMPLIFIED
+COMPLEX
+- does path planning and plotting along with fuel detection. more features, more slow, more chaos.
 
-This folder is more simple, it just send the fuel positions over network tables it shuold be better for lag and stuff
+SIMPLIFIED
+- just detects fuel and sends positions over network tables. less lag, simpler, probably what you want for comp.
 
-#### Classes
+PLOTTERS
+- experiments and plotting utilities (spline stuff, dbscan testing, etc)
 
-- **Camera.py**: Lets you setup a robot camera with lots and lots of paramters
-- **CustomDBScan.py**: Setups a custom dbscan for filtering of points
-- **Fuel.py**: Fuel object thingie
-- **FuelTracker.py**: Simple object but later can be used for more advanced math
-- **NetworkTableHandler.py**: Lets you send data over network tables and stuff
-- **PathPlanner.py**: Main file to get points and stuff. This is way smaller then the complex path planner file
+YOLO_MODELS
+- where all the YOLO models and exports live (.pt, .onnx, etc). mostly sorted but sometimes i'm lazy and dump files.
 
-#### Other Files
+### notable files inside the folders
 
-- **constants.py**: Lets you setup constasnts
-- **game_loop.py**: Lets you "hopefully" run multiple camera's (hasn't been tested yet, theoretical)
-- **solo_game_loop.py**: Lets you run one camera for the game loop, works (probaly)
+COMPLEX classes:
+- Camera.py — camera class with lots of settings
+- CustomDBScan.py — custom DBSCAN filtering for points
+- NetworkTableHandler.py — send data over network tables
+- PathPlanner.py — path planner for the complex flow
 
-### PLOTTERS
+SIMPLIFIED classes:
+- Camera.py — camera class (simpler usage)
+- CustomDBScan.py — point filtering
+- Fuel.py — fuel object
+- FuelTracker.py — small helper for tracking fuel
+- NetworkTableHandler.py — network tables helper
+- PathPlanner.py — smaller path planner for simplified flow
 
-Bunch of testing files.
+Other small files:
+- constants.py — repo constants
+- game_loop.py / solo_game_loop.py — ways to run the camera loop (solo_game_loop usually works fine)
 
-#### Files
 
-- **astar_tech_with_tim.py**: A* algorithm from a really good programming youtuber resource (tech with tim)
-- **b_spline_dbscan.py**: Implementation of interpolating spline and dbscan from ball_layout.json
-- **b_spline.py**: Implementatoin of interpolating spline from ball_layout.py
-- **grid.py**: Failed experiment
-- **kochanek_bartels.py**: Another failed experiment
+## Orange Pi 5 stuff
 
-### YOLO_MODELS
+- IP: 10.22.7.200
+- Username: ubuntu
+- Password: 2207vision
+- Auto-scheduler: run `bach crontab -e`
+- To clone: `git clone git@github.com:FRC2207/2026-Vision-Testing.git`
 
-Contains all the yolo vision models and other file (like .onnx) should be generally sorted by yolo_model and model version but some of them aren't sorted cause I got lazy
+I left the board creds here so it's easy to connect. yeah i know, maybe not the best security but it's the dev box lol.
 
-## Orange Pi 5 Info
 
-- IP: **10.22.7.200**
-- Username: **ubuntu**
-- Password: **2207vision**
-- Auto-scheduler-function: ```bach crontab -e```
-- Clone-Repo: ```bash git clone git@github.com:FRC2207/2026-Vision-Testing.git ```
+# speed table (approx)
+| Model   | Size   | Latency | Estimated FPS |
+|:-------:|:------:|:-------:|--------------:|
+| Yolov26 | nano   | ~99.5ms | ~10           |
+| Yolov11 | nano   | 71.5ms  | ~14           |
+| Yolov11 | small  | 98.9ms  | ~10           |
+| Yolov11 | medium | 235.3ms | ~4            |
+| Yolov8  | nano   | ~20-30ms| ~30-50        |
+| Yolov8  | small  | ~40-60ms| ~15-25        |
+| Yolov5  | nano   | ~15-25ms| ~40-60        |
 
-Learning all this readme.md formatting was actually kinda fund for some reason
 
-# Table thingie that took me a long time and prolly shows why this isnt super realistic
-| Model | Size | Latency | Estimated FPS |
-|:------|:----:|:-------:|--------------:|
-|Yolov26|nano  |~99.5    |~10            |
-|Yolov11|nano  |71.5     |~14            |
-|Yolov11|small |98.9     |~10            |
-|Yolov11|medium|235.3    |~4             |
-|Yolov8 |nano  |~20-30   |~30-50         |
-|Yolov8 |small |~40-60   |~15-25         |
-|Yolov5 |nano  |~15-25   |~40-60         |
+## common commands
+Use these when you're on the pi or dev box:
 
-## Commands
-- "sudo systemctl restart vision.service" - Restart the vision process.
-- "tmux attach -t vision" - Attach to vision tmux process.
-- "git pull" - Pull github code.
-- "git reset --hard HEAD" - Reset code to head, used for undoing local changes.
-- "git clean -fd" - Removed untracked git files.
+```powershell
+sudo systemctl restart vision.service   # restart the vision process
+tmux attach -t vision                   # attach to the vision tmux session
+git pull                                # pull latest code
+git reset --hard HEAD                   # undo local changes
+git clean -fd                           # remove untracked files
+```
+
+
+## notes and warnings (real talk)
+- repo is a little rough around the edges. files moved around a bunch while i was testing stuff.
+- if you're converting models, double-check export settings — i've lost hours to tiny mistakes.
+- simplified path is the one i'd use for comp or low-latency setups.
