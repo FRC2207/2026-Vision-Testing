@@ -172,6 +172,8 @@ class Camera:
                 time.sleep(0.05)
                 continue
 
+            # frame[:, :, 0], frame[:, :, 2] = frame[:, :, 2].copy(), frame[:, :, 0].copy() ONLY IF STILL PINK AFTER EVERYTHING ELSE, LAST RESORT YUYV
+
             # if np.mean(frame) < 1: // To computationally heavy
             if frame.max() < 1:
                 self.logger.debug("Frame is a solid color, skipping...")
