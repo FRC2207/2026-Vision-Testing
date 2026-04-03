@@ -111,19 +111,21 @@ class Camera:
         else:
             # Assume itss a video file or webcam index
             self.is_image = False
+            device = self.source if isinstance(self.source, str) else f"/dev/video{self.source}"
+
+            subprocess.run(["v4l2-ctl", "-d", device, "--set-fmt-video=width=320,height=320,pixelformat=MJPG"])
             self.cap = cv2.VideoCapture(self.source)
 
             ### FALLBACK FOR COMP IF NO ONE WILL LET ME GET HANDS ON THE BOT, THIS ONE 100% WORKS JUTS SUPER SLOW
             # self.cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc('Y', 'U', 'Y', 'V'))
 
-            device = self.source if isinstance(self.source, str) else f"/dev/video{self.source}"
+            self.cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
+
             subprocess.run(["v4l2-ctl", "-d", device, "-c", "auto_exposure=3"], capture_output=True)
             result = subprocess.run(["v4l2-ctl", "-d", device, "-c", "white_balance_automatic=1"], capture_output=True)
             if result.returncode != 0:
                 self.logger.warning(f"v4l2-ctl white balance failed for {device}: {result.stderr.decode()}")
             
-            self.cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'))
-
             ### GSTREAMER TESTS THIS PROBALY WONT WORK BECAUSE OF MY ORANGE PI IMAGE IS SUPER LIGHT
             # pipeline = (
             #     f"v4l2src device={device} !"
