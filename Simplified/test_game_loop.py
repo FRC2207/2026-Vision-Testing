@@ -25,6 +25,10 @@ network_handler = NetworkTableHandler("127.0.0.1")
 space = pymunk.Space()
 space.damping = 0.3
 
+def get_robot_pose():
+    pose = network_handler.get_robot_pose()
+    return pose.X(), pose.Y()
+
 def add_walls():
     static = space.static_body
     walls = [
@@ -48,7 +52,6 @@ def make_ball(x, y):
     space.add(body, shape)
     return body
 
-
 def make_robot(x, y):
     body = pymunk.Body(mass=20, moment=pymunk.moment_for_box(20, (0.7, 0.7)))
     body.position = x, y
@@ -58,19 +61,30 @@ def make_robot(x, y):
     space.add(body, shape)
     return body
 
-
 def random_field_pos():
     return random.uniform(0.5, FIELD_X - 0.5), random.uniform(0.5, FIELD_Y - 0.5)
 
 if __name__ == "__main__":
     add_walls()
 
-    balls = [make_ball(*random_field_pos()) for _ in range(NUM_BALLS)]
+    robot_x, robot_y = get_robot_pose()
+    SPAWN_RADIUS = 5.0
+    balls = []
+    for _ in range(NUM_BALLS):
+        r = SPAWN_RADIUS * (random.random() ** 0.5)  # sqrt for uniform area distribution
+        theta = random.random() * 2 * np.pi
+        x = robot_x + r * np.cos(theta)
+        y = robot_y + r * np.sin(theta)
+        # clamp to stay inside field margins used elsewhere (0.5)
+        x = min(max(x, 0.5), FIELD_X - 0.5)
+        y = min(max(y, 0.5), FIELD_Y - 0.5)
+        balls.append(make_ball(x, y))
+    
     robots = [
-        make_robot(1.0, 1.0),
-        make_robot(FIELD_X - 1.0, 1.0),
-        make_robot(1.0, FIELD_Y - 1.0),
-        make_robot(FIELD_X - 1.0, FIELD_Y - 1.0),
+        make_robot(robot_x, robot_y),
+        # make_robot(FIELD_X - 1.0, 1.0),
+        # make_robot(1.0, FIELD_Y - 1.0),
+        # make_robot(FIELD_X - 1.0, FIELD_Y - 1.0),
     ]
 
     last_time = time.time()
