@@ -9,18 +9,15 @@ class FuelTracker:
 
     def update(self, new_fuel_list: list[Fuel], robot_x, robot_y, robot_yaw) -> list[Fuel]:
         # Tick down timers and prune dead fuels
-        # for fuel in self.fuel_list:
-        #     fuel.update()
-        # self.fuel_list = [f for f in self.fuel_list if not f.destroyed]
+        for fuel in self.fuel_list:
+            fuel.update()
+        self.fuel_list = [f for f in self.fuel_list if not f.destroyed]
 
         # Convert new detections from robot relative to field relative, then merge
-        field_relative_fuels = []
         for fuel in new_fuel_list:
             fuel.relative_to(robot_x, robot_y, robot_yaw)
-            field_relative_fuels.append(fuel)
 
-        self.fuel_list = field_relative_fuels
-        # self.add_fuel_list(field_relative_fuels)
+        self.add_fuel_list(new_fuel_list)  # Merges into existing persisted list
         return self.fuel_list
 
     def add_fuel_list(self, fuels: list[Fuel]):

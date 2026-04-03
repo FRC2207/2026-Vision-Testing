@@ -11,7 +11,7 @@ class Fuel:
         self.alive = 0
 
         self.destroyed = False
-        self.alive_time = 0.2
+        self.alive_time = 0.4
 
     def relative_to(self, robot_x, robot_y, robot_yaw_rad):
         cos_yaw = math.cos(robot_yaw_rad)

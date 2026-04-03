@@ -15,6 +15,7 @@ class VisionCoreConfig:
             "use_network_tables": True,
             "app_mode": True,
             "debug_mode": False,
+            "record_mode": True,
             "stale_threshold": 1.0,
             "camera_configs": {
                 "default": {

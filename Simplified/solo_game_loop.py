@@ -13,7 +13,7 @@ from Classes.FuelTracker import FuelTracker
 from Classes.Metrics import Metrics
 import signal
 from Classes.HealthReporter import HealthReporter
-
+from Classes.VideoRecorder import VideoRecorder
 from rknnlite.api import RKNNLite # No error handling :)
 
 shutdown_event = threading.Event()
@@ -50,6 +50,10 @@ if constants.CONFIG["use_network_tables"]:
     network_handler = NetworkTableHandler(constants.CONFIG["network_tables_ip"])
     if health:
         health.set_network_handler(network_handler)
+
+recorder = None
+if constants.CONFIG["record_mode"]:
+    recorder = VideoRecorder(output_dir="Video", fps=30, codec="mp4v", max_queue=60, downsample=1)
 
 def numpy_to_fuel_list(fuel_positions: np.ndarray) -> list[Fuel]:
     return [Fuel(p[0], p[1]) for p in fuel_positions]
@@ -99,6 +103,12 @@ if __name__ == "__main__":
                     camera_app.set_frame(annotated_frame)
                     flask_s = time.perf_counter() - flask_start
 
+            if recorder and annotated_frame is not None:
+                if not recorder._started:
+                    h, w = annotated_frame.shape[:2]
+                    recorder.start(width=w, height=h)
+                recorder.write(annotated_frame)
+                
             if len(fuel_list) == 0:
                 logger.warning("No fuel positions detected. Skipping loop iteration.")
                 loop_s = time.perf_counter() - start_time
@@ -150,5 +160,7 @@ if __name__ == "__main__":
             logger.info(f"FPS: {1/loop_s:.1f}")
             print(f"\rFPS: {1/loop_s:.1f}      ", end="")
     finally:
-        camera.destroy()
-        metrics.destroy()
+        camera.destroy() if camera else None
+        metrics.destroy() if metrics else None
+        recorder.stop() if recorder else None
+        logger.info("Shutdown complete.")

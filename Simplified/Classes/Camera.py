@@ -113,39 +113,32 @@ class Camera:
             self.is_image = False
             device = self.source if isinstance(self.source, str) else f"/dev/video{self.source}"
 
-            # 1. OPEN FIRST
             self.cap = cv2.VideoCapture(self.source, cv2.CAP_V4L2)
 
             if not self.cap.isOpened():
                 raise ValueError("Camera failed to open")
 
-            # 2. HARD RESET STREAM (important for reboot stability)
             for _ in range(10):
                 self.cap.grab()
 
-            # 3. APPLY V4L2 FORMAT FIRST (THIS IS KEY FIX)
             subprocess.run([
                 "v4l2-ctl", "-d", device,
                 "--set-fmt-video=width=320,height=320,pixelformat=MJPG"
             ], capture_output=True)
 
-            # 4. WAIT FOR DRIVER TO APPLY IT
             time.sleep(0.15)
 
-            # 5. NOW LOCK OPENCV SIDE
             self.cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
             self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 320)
             self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 320)
             #FPS
             self.cap.set(cv2.CAP_PROP_FPS, self.fps_cap)
 
-            # 6. FINAL FLUSH (THIS IS WHAT FIXES PINK AFTER REBOOT)
             for _ in range(20):
                 self.cap.grab()
 
-            # 7. VERIFY (IMPORTANT)
             fmt = self.cap.get(cv2.CAP_PROP_FOURCC)
-            print("FOURCC:", fmt)
+            self.logger.info(f"FOURCC: {fmt}")
 
             if not self.cap.isOpened():
                 self.logger.error(f"Cannot open source {self.source}")
