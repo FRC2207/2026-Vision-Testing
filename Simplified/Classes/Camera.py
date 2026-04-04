@@ -131,6 +131,8 @@ class Camera:
             self.cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
             self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 320)
             self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 320)
+            #FPS
+            self.cap.set(cv2.CAP_PROP_FPS, self.fps_cap)
 
             for _ in range(20):
                 self.cap.grab()
