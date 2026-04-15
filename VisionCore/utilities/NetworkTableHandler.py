@@ -1,7 +1,7 @@
 import ntcore
 import logging
 import numpy as np
-from Classes.Fuel import Fuel
+from VisionCore.trackers.Fuel import Fuel
 import time
 import dataclasses
 import wpiutil.wpistruct

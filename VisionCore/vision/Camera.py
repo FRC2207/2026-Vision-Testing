@@ -10,9 +10,9 @@ import sys
 from scipy.spatial.transform import Rotation
 import threading
 import queue
-from .GenericYolo.genericYolo import Box, Results, YoloWrapper
+from .genericYolo import Box, Results, YoloWrapper
 from rknnlite.api import RKNNLite  # No error handling :)
-from VisionCoreConfig import VisionCoreConfig, VisionCoreCameraConfig
+from VisionCore.config.VisionCoreConfig import VisionCoreConfig, VisionCoreCameraConfig
 import subprocess
 
 class Camera:

@@ -1,14 +1,14 @@
 # Game loop file that should be run on the pi for multiple cameras
-from Classes.Camera import Camera
-from Classes.PathPlanner import PathPlanner
-from Classes.NetworkTableHandler import NetworkTableHandler
-from Classes.MultipleCameraHandler import MultipleCameraHandler
-from Classes.CameraApp import CameraApp
-from Classes.FuelTracker import FuelTracker
-from Classes.Metrics import Metrics
-from Classes.HealthReporter import HealthReporter
-from Classes.Fuel import Fuel
-import constants
+from VisionCore.vision.Camera import Camera
+from VisionCore.trackers.PathPlanner import PathPlanner
+from VisionCore.utilities.NetworkTableHandler import NetworkTableHandler
+from VisionCore.utilities.MultipleCameraHandler import MultipleCameraHandler
+from VisionCore.web.CameraApp import CameraApp
+from VisionCore.trackers.FuelTracker import FuelTracker
+from VisionCore.web.Metrics import Metrics
+from VisionCore.web.healthReporter import HealthReporter
+from VisionCore.trackers.Fuel import Fuel
+import VisionCore.core.constants as constants
 import time
 import threading
 import logging
@@ -31,14 +31,14 @@ logger = logging.getLogger(__name__)
 
 logger.info("Creating camera objects...")
 camera0 = Camera(
-    constants.GRAY_CONFIG.camera_config("Arducam1"),
-    constants.GRAY_CONFIG,
+    constants.CONFIG.camera_config("Arducam"),
+    constants.CONFIG,
     # core_mask=RKNNLite.NPU_CORE_0_1
 )
 
 camera1 = Camera(
-    constants.GRAY_CONFIG.camera_config("Arducam2"),
-    constants.GRAY_CONFIG,
+    constants.CONFIG.camera_config("Microsoft Cinema"),
+    constants.CONFIG,
     # core_mask=RKNNLite.NPU_CORE_2
 )
 logger.info("Camera objects created.")
@@ -48,22 +48,20 @@ camera_handler = MultipleCameraHandler([camera0, camera1])
 
 camera_app = None
 health = None
-if constants.GRAY_CONFIG["app_mode"]:
+if constants.CONFIG["app_mode"]:
     camera_app = CameraApp()
     threading.Thread(target=camera_app.run, daemon=True).start()
-    health = HealthReporter(camera_app.app, constants.GRAY_CONFIG)
+    health = HealthReporter(camera_app.app, constants.CONFIG)
     health.set_camera(camera0)  # Report primary camera for health
 
 network_handler = None
-if constants.GRAY_CONFIG["use_network_tables"]:
-    network_handler = NetworkTableHandler(constants.GRAY_CONFIG["network_tables_ip"])
+if constants.CONFIG["use_network_tables"]:
+    network_handler = NetworkTableHandler(constants.CONFIG["network_tables_ip"])
     if health:
         health.set_network_handler(network_handler)
 
-
 def numpy_to_fuel_list(fuel_positions: np.ndarray) -> list[Fuel]:
     return [Fuel(p[0], p[1]) for p in fuel_positions]
-
 
 def run_vision(camera_handler) -> tuple[list[Fuel], any]:
     try:
@@ -75,13 +73,13 @@ def run_vision(camera_handler) -> tuple[list[Fuel], any]:
 
 if __name__ == "__main__":
     try:
-        logger.info("Starting simplified, multi-camera, gray, VERY experimental loop.")
+        logger.info("Starting simplified, multi-camera loop.")
         logger.info("Warming up...")
 
         fuel_list, _ = run_vision(camera_handler)
 
-        planner = PathPlanner(constants.GRAY_CONFIG)
-        fuel_tracker = FuelTracker(constants.GRAY_CONFIG)
+        planner = PathPlanner(constants.CONFIG)
+        fuel_tracker = FuelTracker(constants.CONFIG)
 
         logger.info("Warmed up.")
 
@@ -107,7 +105,7 @@ if __name__ == "__main__":
                 fuel_list = fuel_tracker.update(fuel_list, 0, 0, 0)
 
             flask_s = None
-            if constants.GRAY_CONFIG["app_mode"]:
+            if constants.CONFIG["app_mode"]:
                 if combined_frame is None:
                     logger.warning("Combined frame not returned from camera handler.")
                 else:
@@ -131,10 +129,9 @@ if __name__ == "__main__":
             noise_positions, fuel_list = planner.update_fuel_positions(fuel_list)
 
             network_s = None
-            if constants.GRAY_CONFIG["use_network_tables"]:
+            if constants.CONFIG["use_network_tables"]:
                 network_start = time.perf_counter()
                 network_handler.send_fuel_list(fuel_list, "vision_data", "VisionData")
-               
                 loop_s = time.perf_counter() - start_time
                 network_handler.send_data(1 / loop_s, "fps", "VisionData")
                 network_handler.send_data(len(fuel_list), "num_detections", "VisionData")

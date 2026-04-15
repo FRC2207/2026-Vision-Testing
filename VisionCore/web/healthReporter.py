@@ -1,6 +1,6 @@
 import time
 import threading
-from VisionCoreConfig import VisionCoreConfig
+from VisionCore.config.VisionCoreConfig import VisionCoreConfig
 from flask import jsonify, Response, request
 
 class HealthReporter:

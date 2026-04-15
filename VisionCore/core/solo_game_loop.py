@@ -1,20 +1,20 @@
-# Game loop file that should be run on the pi for multiple cameras
-from Classes.Camera import Camera
-from Classes.PathPlanner import PathPlanner
-from Classes.NetworkTableHandler import NetworkTableHandler
-from Classes.MultipleCameraHandler import MultipleCameraHandler
-from Classes.CameraApp import CameraApp
-from Classes.FuelTracker import FuelTracker
-from Classes.Metrics import Metrics
-from Classes.HealthReporter import HealthReporter
-from Classes.Fuel import Fuel
-import constants
+# Game loop file that should be run on the pi for one camera
+from VisionCore.vision.Camera import Camera
+from VisionCore.trackers.PathPlanner import PathPlanner
+from VisionCore.utilities.NetworkTableHandler import NetworkTableHandler
 import time
+import VisionCore.core.constants as constants
+from VisionCore.web.CameraApp import CameraApp
 import threading
 import logging
-import signal
 import numpy as np
-# from rknnlite.api import RKNNLite
+from VisionCore.trackers.Fuel import Fuel
+from VisionCore.trackers.FuelTracker import FuelTracker
+from VisionCore.web.Metrics import Metrics
+import signal
+from VisionCore.web.healthReporter import HealthReporter
+from VisionCore.utilities.VideoRecorder import VideoRecorder
+from rknnlite.api import RKNNLite # No error handling :)
 
 shutdown_event = threading.Event()
 signal.signal(signal.SIGINT, lambda sig, frame: shutdown_event.set())
@@ -29,22 +29,13 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-logger.info("Creating camera objects...")
-camera0 = Camera(
+camera = Camera(
     constants.CONFIG.camera_config("Arducam"),
     constants.CONFIG,
-    # core_mask=RKNNLite.NPU_CORE_0_1
+    RKNNLite.NPU_CORE_0_1_2,
 )
-
-camera1 = Camera(
-    constants.CONFIG.camera_config("Microsoft Cinema"),
-    constants.CONFIG,
-    # core_mask=RKNNLite.NPU_CORE_2
-)
-logger.info("Camera objects created.")
 
 metrics = Metrics()
-camera_handler = MultipleCameraHandler([camera0, camera1])
 
 camera_app = None
 health = None
@@ -52,7 +43,7 @@ if constants.CONFIG["app_mode"]:
     camera_app = CameraApp()
     threading.Thread(target=camera_app.run, daemon=True).start()
     health = HealthReporter(camera_app.app, constants.CONFIG)
-    health.set_camera(camera0)  # Report primary camera for health
+    health.set_camera(camera)
 
 network_handler = None
 if constants.CONFIG["use_network_tables"]:
@@ -60,37 +51,36 @@ if constants.CONFIG["use_network_tables"]:
     if health:
         health.set_network_handler(network_handler)
 
+recorder = None
+if constants.CONFIG["record_mode"]:
+    recorder = VideoRecorder(output_dir="Video", fps=30, codec="mp4v", max_queue=60, downsample=1)
+
 def numpy_to_fuel_list(fuel_positions: np.ndarray) -> list[Fuel]:
     return [Fuel(p[0], p[1]) for p in fuel_positions]
 
-def run_vision(camera_handler) -> tuple[list[Fuel], any]:
+def run_vision(camera):
     try:
-        raw_fuel_positions = camera_handler.predict()
-        return numpy_to_fuel_list(raw_fuel_positions), camera_handler.get_combined_frame()
+        raw_fuel_positions, annotated_frame = camera.run()
+        return numpy_to_fuel_list(raw_fuel_positions), annotated_frame
     except Exception as e:
         logger.exception(f"Vision exception: {e}")
         return [], None
 
 if __name__ == "__main__":
     try:
-        logger.info("Starting simplified, multi-camera loop.")
-        logger.info("Warming up...")
+        logger.info("Starting simplified, single-camera loop.")
 
-        fuel_list, _ = run_vision(camera_handler)
+        fuel_list, annotated_frame = run_vision(camera)
 
         planner = PathPlanner(constants.CONFIG)
         fuel_tracker = FuelTracker(constants.CONFIG)
 
-        logger.info("Warmed up.")
-
         while not shutdown_event.is_set():
             start_time = time.perf_counter()
-
-            ages = [cam.get_frame_age() for cam in camera_handler.cameras]
-            camera_lag_s = sum(ages) / len(ages) if ages else 0.0
+            camera_lag_s = camera.get_frame_age()
 
             vision_start = time.perf_counter()
-            fuel_list, combined_frame = run_vision(camera_handler)
+            fuel_list, annotated_frame = run_vision(camera)
             vision_s = time.perf_counter() - vision_start
 
             if network_handler:
@@ -106,13 +96,19 @@ if __name__ == "__main__":
 
             flask_s = None
             if constants.CONFIG["app_mode"]:
-                if combined_frame is None:
-                    logger.warning("Combined frame not returned from camera handler.")
+                if annotated_frame is None:
+                    logger.warning("Frame not returned from camera.run()")
                 else:
                     flask_start = time.perf_counter()
-                    camera_app.set_frame(combined_frame)
+                    camera_app.set_frame(annotated_frame)
                     flask_s = time.perf_counter() - flask_start
 
+            if recorder and annotated_frame is not None:
+                if not recorder._started:
+                    h, w = annotated_frame.shape[:2]
+                    recorder.start(width=w, height=h)
+                recorder.write(annotated_frame)
+                
             if len(fuel_list) == 0:
                 logger.warning("No fuel positions detected. Skipping loop iteration.")
                 loop_s = time.perf_counter() - start_time
@@ -134,14 +130,10 @@ if __name__ == "__main__":
                 network_handler.send_fuel_list(fuel_list, "vision_data", "VisionData")
                 loop_s = time.perf_counter() - start_time
                 network_handler.send_data(1 / loop_s, "fps", "VisionData")
-                network_handler.send_data(len(fuel_list), "num_detections", "VisionData")
+                network_handler.send_data(
+                    len(fuel_list), "num_detections", "VisionData"
+                )
                 network_handler.send_data(camera_lag_s, "camera_lag", "VisionData")
-
-                for camera in camera_handler.cameras:
-                    data = camera.get_data_for_subsytem("hopper")
-                    if data is not None:
-                        network_handler.send_boolean(data, "hopper_sees_object", "VisionData")
-
                 network_s = time.perf_counter() - network_start
 
             loop_s = time.perf_counter() - start_time
@@ -162,10 +154,13 @@ if __name__ == "__main__":
                 network_s=network_s,
                 health_s=health_s,
             )
+
             metrics.tick()
 
             logger.info(f"FPS: {1/loop_s:.1f}")
             print(f"\rFPS: {1/loop_s:.1f}      ", end="")
     finally:
-        camera_handler.destroy()
-        metrics.destroy()
+        camera.destroy() if camera else None
+        metrics.destroy() if metrics else None
+        recorder.stop() if recorder else None
+        logger.info("Shutdown complete.")

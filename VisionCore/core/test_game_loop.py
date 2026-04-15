@@ -4,8 +4,8 @@ import logging
 import math
 import numpy as np
 import pymunk
-from Classes.NetworkTableHandler import NetworkTableHandler
-from Classes.Fuel import Fuel
+from VisionCore.utilities.NetworkTableHandler import NetworkTableHandler
+from VisionCore.trackers.Fuel import Fuel
 
 logging.basicConfig(
     level=logging.INFO,

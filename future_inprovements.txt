@@ -5,3 +5,11 @@ FULLY test multi camera fusion (subsystem, deduplicatoin, etc)
 Really hard, but on-device UI training pipeline
 Apriltage pipline/detection
 Service + watchdog to restart on crashes and stuff
+
+###### GOAL #####
+VisionCore ships as a pre-built Ubuntu 22.04 image that 
+users flash to an Orange Pi 5 (or run the install script 
+on any other supported device). On first boot, the systemd
+service starts automatically and the user opens a browser to 
+visioncore.local to configure everything. No SSH required for 
+normal use.

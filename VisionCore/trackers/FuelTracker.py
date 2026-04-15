@@ -1,6 +1,6 @@
 import numpy as np
 from .Fuel import Fuel
-from VisionCoreConfig import VisionCoreConfig
+from VisionCore.config.VisionCoreConfig import VisionCoreConfig
 
 class FuelTracker:
     def __init__(self, config: VisionCoreConfig):

@@ -1,4 +1,4 @@
-from Classes.Camera import Camera
+from VisionCore.vision.Camera import Camera
 import cv2
 import numpy as np
 import logging
