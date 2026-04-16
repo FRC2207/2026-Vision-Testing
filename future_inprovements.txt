@@ -13,3 +13,13 @@ on any other supported device). On first boot, the systemd
 service starts automatically and the user opens a browser to 
 visioncore.local to configure everything. No SSH required for 
 normal use.
+
+Make it generic:
+Send emails if condition met
+visioncore.local full configuration
+Automatic GPU/NPU/CPU/TPU detection:
+TPU: .tflite
+GPU: .pt, .engine
+Sell/Product:
+Sell packs
+Sell images microsd cards
