@@ -1,5 +1,5 @@
 # Game loop file that should be run on the pi for multiple cameras
-from VisionCore.vision.Camera import Camera
+from VisionCore.vision.ObjectDetectionCamera import ObjectDetectionCamera
 from VisionCore.trackers.PathPlanner import PathPlanner
 from VisionCore.utilities.NetworkTableHandler import NetworkTableHandler
 from VisionCore.utilities.MultipleCameraHandler import MultipleCameraHandler
@@ -30,13 +30,13 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 logger.info("Creating camera objects...")
-camera0 = Camera(
+camera0 = ObjectDetectionCamera(
     constants.GRAY_CONFIG.camera_config("Arducam1"),
     constants.GRAY_CONFIG,
     # core_mask=RKNNLite.NPU_CORE_0_1
 )
 
-camera1 = Camera(
+camera1 = ObjectDetectionCamera(
     constants.GRAY_CONFIG.camera_config("Arducam2"),
     constants.GRAY_CONFIG,
     # core_mask=RKNNLite.NPU_CORE_2

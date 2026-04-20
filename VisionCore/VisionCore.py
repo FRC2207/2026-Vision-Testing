@@ -1,6 +1,6 @@
 # This is the class u call smth like VisionCore(cameras, config).run()
 from VisionCore.utilities.MultipleCameraHandler import MultipleCameraHandler
-from VisionCore.vision.Camera import Camera
+from VisionCore.vision.ObjectDetectionCamera import ObjectDetectionCamera
 from VisionCore.trackers.PathPlanner import PathPlanner
 from VisionCore.utilities.NetworkTableHandler import NetworkTableHandler
 import time
@@ -23,9 +23,8 @@ try:
 except ImportError:
     RKNN_FOUND = False
 
-
 class VisionCore:
-    def __init__(self, cameras: list[Camera], config: VisionCoreConfig):
+    def __init__(self, cameras: list[ObjectDetectionCamera], config: VisionCoreConfig):
         self.cameras = cameras
         self.config = config
         self.shutdown_event = threading.Event()
@@ -44,7 +43,7 @@ class VisionCore:
 
         self.metrics = Metrics() if self.config["metrics"] else None
 
-        self.camera_app = CameraApp() if self.config["app_mode"] else None
+        self.camera_app = CameraApp(cameras=self.cameras, config=self.config) if self.config["app_mode"] else None
         self.health = HealthReporter(self.camera_app.app, self.config) if self.config["app_mode"] else None
         self.network_handler = NetworkTableHandler(self.config["network_tables_ip"]) if self.config["use_network_tables"] else None
 
@@ -70,6 +69,9 @@ class VisionCore:
 
         self.recorder = VideoRecorder(output_dir="VideoRecordings :)") if self.config["record_mode"] else None
 
+    def get_default_config(self):
+        return self.config.get_default_config()
+
     # These methods are really jsut to simpify stuff so it doesnt look as bad (like me :))
     def _record_metrics(self, **kwargs):
         if self.metrics:
@@ -94,7 +96,7 @@ class VisionCore:
             self.logger.exception(f"Vision exception: {e}")
             return [], None
 
-    def run_solo_vision(self, camera: Camera):
+    def run_solo_vision(self, camera: ObjectDetectionCamera):
         try:
             raw_fuel_positions, annotated_frame = camera.run()
             return self.numpy_to_fuel_list(raw_fuel_positions), annotated_frame
@@ -102,11 +104,21 @@ class VisionCore:
             self.logger.exception(f"Vision exception: {e}")
             return [], None
 
-    def run(self):
+    def run(self, duration_s=30):
+
         if len(self.cameras) == 0:
             self.logger.error("No cameras provided to VisionCore.")
             return
-        elif len(self.cameras) == 1:
+
+        def stop_after_delay():
+            time.sleep(duration_s)
+            self.logger.info(f"Duration {duration_s}s reached. Stopping...")
+            self.shutdown_event.set()
+
+        if duration_s is not None:
+            threading.Thread(target=stop_after_delay, daemon=True).start()
+
+        if len(self.cameras) == 1:
             self.logger.info("Running in solo camera mode.")
             self.run_solo_mode()
         else:
@@ -149,7 +161,8 @@ class VisionCore:
                         self.logger.warning("Annotated frame not returned from camera.")
                     else:
                         flask_start = time.perf_counter()
-                        self.camera_app.set_frame(annotated_frame)
+                        camera_name = camera.config.get("name", "Camera 1") if hasattr(camera, 'config') else "Camera 1"
+                        self.camera_app.set_frame(annotated_frame, camera_name=camera_name)
                         flask_s = time.perf_counter() - flask_start
 
                 if len(fuel_list) == 0:
@@ -237,7 +250,17 @@ class VisionCore:
                         self.logger.warning("Combined frame not returned from camera handler.")
                     else:
                         flask_start = time.perf_counter()
+                        # Store combined frame and individual camera frames
                         self.camera_app.set_frame(combined_frame)
+                        for i, camera in enumerate(self.camera_handler.cameras):
+                            camera_name = camera.config.get("name", f"Camera {i+1}") if hasattr(camera, 'config') else f"Camera {i+1}"
+                            # If camera has its own frame, store it
+                            try:
+                                _, frame = camera.run()
+                                if frame is not None:
+                                    self.camera_app.set_frame(frame, camera_name=camera_name)
+                            except:
+                                pass
                         flask_s = time.perf_counter() - flask_start
 
                 if len(fuel_list) == 0:

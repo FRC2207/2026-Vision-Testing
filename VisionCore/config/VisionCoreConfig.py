@@ -17,6 +17,8 @@ class VisionCoreConfig:
             "debug_mode": False,
             "record_mode": True,
             "stale_threshold": 1.0,
+            "cameara_matrix": [[0, 0, 0], [0, 0, 0], [0, 0, 0]],
+            "dist_coeffs": [0, 0, 0, 0, 0],
             "camera_configs": {
                 "default": {
                     "name": "default",
@@ -25,14 +27,19 @@ class VisionCoreConfig:
                     "fps_cap": -1,
                     "calibration": {"size": 0, "distance": 0, "game_piece_size": 0, "fov": 0},
                     "source": "/dev/video0",
-                    "subsystem": "field"
+                    "subsystem": "field",
+                    "pipeline": "object" # Or april_tag
                 },
             },
             "vision_model": {
                 "quantized": False,
                 "file_path": "model.pt",
                 "input_size": [640, 640]
-            }
+            },
+            "april_tag": {
+                "tag_size": 0.0
+            },
+            "auto_opt": True
         }
         self.config = self.default_config.copy()
 
@@ -42,6 +49,19 @@ class VisionCoreConfig:
         self.camera_configs = {}
         for cam_name, cam_config in self.config["camera_configs"].items():
             self.camera_configs[cam_name] = VisionCoreCameraConfig(cam_config)
+
+        self.check_config()
+
+    def get_default_config(self):
+        return self.default_config
+
+    def check_config(self):
+        # Later add more validation checks like spelling and strucutre and stuff
+        if self.config == self.default_config:
+            self.logger.warning("Using default configuration. Please load a config file for proper operation.")
+        else:
+            if self.config["vision_model"] and self.config["april_tag"]:
+                self.logger.warning("Both vision_model and april_tag configurations are present. Ensure this is intentional.")
         
     def camera_config(self, cam_name: str):
         return self.camera_configs.get(cam_name, {})

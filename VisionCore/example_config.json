@@ -26,6 +26,7 @@
             "quantized": false,
             "file_path": "model.pt",
             "input_size": [640, 640]
-        }
+        },
+        "auto_opt": true
     }
 }

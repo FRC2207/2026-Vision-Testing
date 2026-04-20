@@ -1,5 +1,5 @@
 # Game loop file that should be run on the pi for one camera
-from VisionCore.vision.Camera import Camera
+from VisionCore.vision.ObjectDetectionCamera import ObjectDetectionCamera
 from VisionCore.trackers.PathPlanner import PathPlanner
 from VisionCore.utilities.NetworkTableHandler import NetworkTableHandler
 import time
@@ -29,7 +29,7 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-camera = Camera(
+camera = ObjectDetectionCamera(
     constants.CONFIG.camera_config("Arducam"),
     constants.CONFIG,
     RKNNLite.NPU_CORE_0_1_2,
