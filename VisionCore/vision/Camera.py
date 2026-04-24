@@ -15,7 +15,8 @@ from rknnlite.api import RKNNLite  # No error handling :)
 from VisionCore.config.VisionCoreConfig import VisionCoreConfig, VisionCoreCameraConfig
 import subprocess
 
-class ObjectDetectionCamera:
+class Camera:
+    """Simple VisionCore starter Camera, so I can later expand into AprilTags and stuff. All it does """
     def __init__(
         self,
         camera_config: VisionCoreConfig,
