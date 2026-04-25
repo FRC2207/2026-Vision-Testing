@@ -3,22 +3,22 @@
 from VisionCore import VisionCore
 from VisionCore.vision.ObjectDetectionCamera import ObjectDetectionCamera
 from VisionCore.config.VisionCoreConfig import VisionCoreConfig
-import VisionCore.core.constants as constants
+from VisionCore.validations.ez import unit_tests
 
 def main():
     # Load config (you can also customize this)
-    config = VisionCoreConfig(constants.CONFIG)
+    config = VisionCoreConfig("example_config.json")
 
     # Create cameras (add/remove depending on your setup)
     cameras = [
         ObjectDetectionCamera(
-            constants.CONFIG.camera_config("Camera 1"),
-            constants.CONFIG,
+            config.camera_config("Camera 1"),
+            config,
         ),
         # Uncomment for multi-camera
         # Camera(
-        #     constants.CONFIG.camera_config("Camera 2"),
-        #     constants.CONFIG,
+        #     config.camera_config("Camera 2"),
+        #     config,
         # ),
     ]
 
@@ -28,4 +28,6 @@ def main():
 
 
 if __name__ == "__main__":
+    if not unit_tests():
+        raise SystemExit("Unit tests failed")
     main()

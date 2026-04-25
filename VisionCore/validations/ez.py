@@ -10,16 +10,20 @@ import sys
 import unittest
 
 
-def main() -> int:
+def unit_tests(verbosity: int = 2) -> bool:
     repo_root = os.path.dirname(os.path.abspath(__file__))
     if repo_root not in sys.path:
         sys.path.insert(0, repo_root)
 
     loader = unittest.TestLoader()
     suite = loader.discover(start_dir=repo_root, pattern="test.py")
-    runner = unittest.TextTestRunner(verbosity=2)
+    runner = unittest.TextTestRunner(verbosity=verbosity)
     result = runner.run(suite)
-    return 0 if result.wasSuccessful() else 1
+    return result.wasSuccessful()
+
+
+def main() -> int:
+    return 0 if unit_tests() else 1
 
 
 if __name__ == "__main__":
