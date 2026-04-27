@@ -1,10 +1,3 @@
-#!/usr/bin/env python3
-"""
-unit_test.py
-
-Run the repository unit test suite from the project root.
-This file is intended to be executed before other code to verify the current state.
-"""
 import os
 import sys
 import unittest
@@ -21,10 +14,8 @@ def unit_tests(verbosity: int = 2) -> bool:
     result = runner.run(suite)
     return result.wasSuccessful()
 
-
 def main() -> int:
     return 0 if unit_tests() else 1
-
 
 if __name__ == "__main__":
     raise SystemExit(main())
