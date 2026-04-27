@@ -1,10 +1,17 @@
-from config.AutoOpt import recommend_format
-from validations.validate_system import validate_system
-from config.VisionCoreConfig import VisionCoreConfig
+import sys
 import os
 import logging
-from pathlib import Path
 import subprocess
+from pathlib import Path
+
+_BOOT_DIR = Path(__file__).resolve().parent
+_REPO_ROOT = _BOOT_DIR.parents[1] # two levels up
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
+from VisionCore.config.AutoOpt import recommend_format
+from VisionCore.validations.validate_system import validate_system
+from VisionCore.config.VisionCoreConfig import VisionCoreConfig
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -18,25 +25,20 @@ FORMAT_EXTENSIONS = {
 }
 
 def search_for_config() -> str:
-    config_dir = Path("config")
+    config_dir = _REPO_ROOT / "config"
     if not config_dir.exists():
-        raise FileNotFoundError("config directory not found.")
+        raise FileNotFoundError(f"config directory not found at {config_dir}")
 
-    config_files = [
-        os.path.join(root, file)
-        for root, _, files in os.walk(config_dir)
-        for file in files
-        if file.endswith(".json")
-    ]
-
+    config_files = list(config_dir.rglob("*.json"))
     if not config_files:
-        raise FileNotFoundError("No config files found in the config directory.")
+        raise FileNotFoundError("No .json config files found in config/")
 
-    logger.info(f"Found config files: {config_files}. Using: {config_files[0]}")
-    return config_files[0]
+    chosen = str(config_files[0])
+    logger.info("Found config files: %s  →  using %s", config_files, chosen)
+    return chosen
 
 def on_boot():
-    logger.info("Starting VisionCore boot sequence...")
+    logger.info("Starting VisionCore boot sequence…")
 
     # 1. Validate system
     if not validate_system():
@@ -46,40 +48,43 @@ def on_boot():
     # 2. Load config
     config_file = search_for_config()
     config = VisionCoreConfig(config_file)
-    logger.info(f"Loaded config from {config_file}.")
+    logger.info("Loaded config from %s", config_file)
 
     # 3. Auto-optimization
-    if config.get("auto_opt", False):
+    if config.get("auto_opt"):
         best_format = recommend_format()
-        logger.info(f"Auto-opt enabled. Recommended format: {best_format}")
+        logger.info("Auto-opt enabled. Recommended format: %s", best_format)
 
         extension = FORMAT_EXTENSIONS.get(best_format)
         if not extension:
             raise ValueError(f"No extension mapping for format: {best_format}")
 
-        model_dir = Path("YoloModels")
-        optimized_models = list(model_dir.rglob(f"*{extension}"))
+        model_dir = _REPO_ROOT / "YoloModels"
+        optimized = list(model_dir.rglob(f"*{extension}"))
 
-        if optimized_models:
-            chosen = str(optimized_models[0])
-            logger.info(f"Found optimized model(s): {[str(m) for m in optimized_models]}. Using: {chosen}")
+        if optimized:
+            chosen = str(optimized[0])
+            logger.info("Found optimised model(s): %s  →  using %s",
+                        [str(m) for m in optimized], chosen)
             config.set("model_path", chosen)
         else:
-            logger.warning(f"No {best_format} models found in YoloModels/. Falling back to config model path.")
+            logger.warning("No %s models found in YoloModels/. Falling back to config path.", best_format)
     else:
-        logger.info("Auto-opt disabled. Using model path from config.")
+        logger.info("Auto-opt disabled.")
 
     model_path = config.get("model_path")
     if not model_path or not Path(model_path).exists():
         raise FileNotFoundError(f"Model file not found: {model_path}")
 
-    logger.info(f"Boot sequence complete. Model: {model_path}")
-    logger.info(f"Starting main application with config: {config_file}")
+    logger.info("Boot sequence complete. Model: %s", model_path)
 
+    # 4. Install service using the same Python interpreter that launched boot.py
+    install_script = str(_BOOT_DIR / "install.py")
     try:
-        subprocess.run(["python", "install.py"], check=True)
+        subprocess.run([sys.executable, install_script], check=True, cwd=str(_REPO_ROOT))
     except subprocess.CalledProcessError as e:
-        logger.error(f"Failed to run install.py: {e}")
+        logger.error("Failed to run install.py: %s", e)
         raise RuntimeError("Boot failed during service installation.")
 
-on_boot()
+if __name__ == "__main__":
+    on_boot()

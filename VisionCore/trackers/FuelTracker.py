@@ -4,35 +4,54 @@ from VisionCore.config.VisionCoreConfig import VisionCoreConfig
 
 class FuelTracker:
     def __init__(self, config: VisionCoreConfig):
-        self.fuel_list = []
-        self.distance_threshold = config["distance_threshold"]
+        self.fuel_list: list[Fuel] = []
 
-    def update(self, new_fuel_list: list[Fuel], robot_x, robot_y, robot_yaw) -> list[Fuel]:
-        # Tick down timers and prune dead fuels
+        raw_threshold = config["distance_threshold"]
+        if raw_threshold is None or raw_threshold < 0:
+            self.logger_warning = True
+            self.distance_threshold = 0.5
+        else:
+            self.logger_warning = False
+            self.distance_threshold = float(raw_threshold)
+
+        import logging
+        self.logger = logging.getLogger(__name__)
+        if self.logger_warning:
+            self.logger.warning(
+                "distance_threshold is negative or unset in config; "
+                "defaulting to 0.5 m to prevent unbounded fuel list growth."
+            )
+
+    def update(
+        self,
+        new_fuel_list: list[Fuel],
+        robot_x: float,
+        robot_y: float,
+        robot_yaw: float,
+    ) -> list[Fuel]:
+        # Age existing fuels and remove expired ones
         for fuel in self.fuel_list:
             fuel.update()
         self.fuel_list = [f for f in self.fuel_list if not f.destroyed]
 
-        # Convert new detections from robot relative to field relative, then merge
+        # Transform new detections from robot-relative to field-relative
         for fuel in new_fuel_list:
             fuel.relative_to(robot_x, robot_y, robot_yaw)
 
-        self.add_fuel_list(new_fuel_list)  # Merges into existing persisted list
+        self._merge(new_fuel_list)
         return self.fuel_list
 
-    def add_fuel_list(self, fuels: list[Fuel]):
+    def _merge(self, fuels: list[Fuel]):
         for fuel in fuels:
-            if not self._fuel_already_exists(fuel, self.fuel_list):
+            if not self._already_exists(fuel):
                 self.fuel_list.append(fuel)
 
-    def _fuel_already_exists(self, new_fuel: Fuel, existing_fuels: list[Fuel]) -> bool:
-        if not existing_fuels:
+    def _already_exists(self, new_fuel: Fuel) -> bool:
+        if not self.fuel_list:
             return False
-        
         new_pos = np.array(new_fuel.get_position())
-        for existing in existing_fuels:
-            existing_pos = np.array(existing.get_position())
-            if np.linalg.norm(new_pos - existing_pos) < self.distance_threshold:
+        for existing in self.fuel_list:
+            if np.linalg.norm(new_pos - np.array(existing.get_position())) < self.distance_threshold:
                 existing.reset_time()
                 return True
         return False
