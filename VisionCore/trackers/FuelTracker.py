@@ -56,8 +56,10 @@ class FuelTracker:
         for existing in self.fuel_list:
             if np.linalg.norm(new_pos - np.array(existing.get_position())) < self.distance_threshold:
                 existing.reset_time()
+                existing.x = new_fuel.x  # update position to latest detection
+                existing.y = new_fuel.y
                 return True
         return False
-
+    
     def get_fuel_list(self) -> list[Fuel]:
         return self.fuel_list

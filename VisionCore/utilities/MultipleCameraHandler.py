@@ -34,9 +34,9 @@ class MultipleCameraHandler:
                 self.logger.warning(f"Camera {camera.source} error: {e}")
 
     def predict(self) -> np.ndarray:
-        # Wait for every camera to produce one fresh frame since last call
         for event in self._fresh:
-            event.wait(timeout=0.2)  # 200ms max — if camera dies, don't hang forever
+            if not event.wait(timeout=0.2):
+                self.logger.debug("Camera timed out waiting for fresh frame")
             event.clear()
 
         all_positions = []

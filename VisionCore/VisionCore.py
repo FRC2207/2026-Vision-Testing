@@ -85,7 +85,7 @@ class VisionCore:
         if self.metrics:
             self.metrics.destroy()
 
-    def numpy_to_fuel_list(positions: np.ndarray) -> list[Fuel]:
+    def numpy_to_fuel_list(self, positions: np.ndarray) -> list[Fuel]:
         return [Fuel(float(p[0]), float(p[1])) for p in positions]
 
     def run_multi_vision(self, handler: MultipleCameraHandler):
@@ -124,6 +124,9 @@ class VisionCore:
     def run_solo_mode(self):
         camera = self.cameras[0]
         try:
+            if self.recorder:
+                self.recorder.start(camera.input_size[0], camera.input_size[1])
+
             self.logger.info("Solo mode — warming up…")
             self.run_solo_vision(camera)
             self.logger.info("Warm-up complete.")
@@ -152,6 +155,9 @@ class VisionCore:
                                 if hasattr(camera, "config") else "Camera 1")
                     self.camera_app.set_frame(annotated_frame, camera_name=cam_name)
                     flask_s = time.perf_counter() - t_f
+
+                if self.recorder and annotated_frame is not None:
+                    self.recorder.write(annotated_frame)
 
                 loop_s = time.perf_counter() - t0
 
@@ -199,7 +205,14 @@ class VisionCore:
 
     def run_multi_mode(self):
         handler = self.camera_handler
+        if handler is None:
+            self.logger.error("Multi-camera mode requested but camera handler failed to initialize.")
+            return
         try:
+            if self.recorder:
+                h, w = handler.cameras[0].input_size[1], handler.cameras[0].input_size[0]
+                self.recorder.start(w, h)
+
             self.logger.info("Multi mode. warming up…")
             self.run_multi_vision(handler)
             self.logger.info("Warm-up complete.")

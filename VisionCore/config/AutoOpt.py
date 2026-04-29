@@ -28,39 +28,31 @@ def command_exists(cmd):
 def has_nvidia():
     return command_exists("nvidia-smi")
 
-
 def has_amd_gpu():
     if os.name == "nt":
         return "amd" in run("wmic path win32_videocontroller get name")
     return "amd" in run(["lspci"]) or "radeon" in run(["lspci"])
 
-
 def has_intel_gpu():
     return "intel" in platform.processor().lower() or "intel" in run(["lspci"])
 
-
-def has_arm_cpu():
+def has_arm():
     return "arm" in platform.machine().lower() or "aarch" in platform.machine().lower()
-
 
 def has_apple_silicon():
     return platform.system() == "Darwin" and "arm" in platform.machine().lower()
-
 
 @lru_cache()
 def lsusb():
     return run(["lsusb"]) if command_exists("lsusb") else run("wmic path win32_pnpentity get name")
 
-
 def has_intel_vpu():
     usb = lsusb()
     return "movidius" in usb or "03e7:2485" in usb
 
-
 def has_edge_tpu():
     usb = lsusb()
     return "18d1:9302" in usb or "1ac1:089a" in usb
-
 
 def has_rockchip_npu():
     return (
@@ -101,7 +93,7 @@ def recommend_format() -> str:
         scores["openvino"] += 70
 
     # ARM CPU (Raspberry Pi, Jetson, etc) -> TFLite
-    if has_arm_cpu():
+    if has_arm():
         scores["tflite"] += 60
 
     # Fallback: ONNX is the most portable format
