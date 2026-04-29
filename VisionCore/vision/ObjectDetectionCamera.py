@@ -19,6 +19,8 @@ class ObjectDetectionCamera(Camera):
     ):
         self.logger = logging.getLogger(__name__)
 
+        self.config = camera_config
+
         try:
             self.known_calibration_distance    = camera_config["calibration"]["distance"]
             self.ball_d_inches                 = camera_config["calibration"]["game_piece_size"]
@@ -39,7 +41,7 @@ class ObjectDetectionCamera(Camera):
         self.margin         = config["vision_model"].get("margin", 0)
         self.min_confidence = config["vision_model"].get("min_conf", 0.5)
         self.yolo_model_file = config["vision_model"]["file_path"]
-        self.input_size     = tuple(config["vision_model"]["input_size"])   # (w, h)
+        self.input_size     = tuple(config["vision_model"]["input_size"])
         self.quantized      = config["vision_model"].get("quantized", False)
         self.core_mask      = core_mask
         self.unit           = config["unit"]
@@ -65,10 +67,8 @@ class ObjectDetectionCamera(Camera):
             self.logger.warning("Calibration game_piece_size is zero, defaulting focal length to 1")
             self.focal_length_pixels = 1.0
 
-        # Now it is safe to start the base class (starts reader thread)
         super().__init__(camera_config, self.fps_cap, self.input_size, self.grayscale)
 
-        # Vision model
         self.model = YoloWrapper(
             self.yolo_model_file,
             self.core_mask,
@@ -76,7 +76,6 @@ class ObjectDetectionCamera(Camera):
             quantized=self.quantized,
         )
 
-        # Single preprocess queue (only used for RKNN pipeline)
         self._preproc_q: queue.Queue = queue.Queue(maxsize=1)
         self._use_pipeline = (not self.is_image) and (self.model.model_type == "rknn")
 
@@ -209,7 +208,6 @@ class ObjectDetectionCamera(Camera):
             try:
                 preprocessed, orig_frame, orig_shape = self._preproc_q.get(timeout=self.frame_timeout)
             except queue.Empty:
-                # Return cached data rather than blocking
                 return self._last_result, self._last_frame
 
             results        = self.model.predict_preprocessed(preprocessed, orig_shape)
@@ -275,7 +273,7 @@ class ObjectDetectionCamera(Camera):
         positions, _ = self.run()
         if self.subsystem == "hopper":
             return positions.shape[0] > 0
-        return positions # "field" or anything else
+        return positions
 
     def get_subsystem(self) -> str:
         return self.subsystem

@@ -46,7 +46,7 @@ def on_boot():
     logger.info("System validation passed.")
 
     # 2. Load config
-    config_file = search_for_config()
+    config_file = os.environ.get("VISIONCORE_CONFIG") or str(search_for_config())
     config = VisionCoreConfig(config_file)
     logger.info("Loaded config from %s", config_file)
 

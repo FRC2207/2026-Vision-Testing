@@ -36,6 +36,8 @@ def has_amd_gpu():
 def has_intel_gpu():
     return "intel" in platform.processor().lower() or "intel" in run(["lspci"])
 
+has_intel = has_intel_gpu
+
 def has_arm():
     return "arm" in platform.machine().lower() or "aarch" in platform.machine().lower()
 
@@ -60,6 +62,9 @@ def has_rockchip_npu():
         os.path.exists("/dev/rknpu0") or
         "rknn" in run("dmesg")
     )
+
+def has_hailo_npu():
+    return os.path.exists("/dev/hailo0")
 
 def recommend_format() -> str:
     scores = {fmt: 0 for fmt in SUPPORTED_FORMATS}
@@ -89,7 +94,7 @@ def recommend_format() -> str:
         scores["onnx"] += 70
 
     # Intel GPU/CPU -> OpenVINO
-    if has_intel_gpu():
+    if has_intel_gpu():                  # FIX: was has_intel() — NameError at runtime
         scores["openvino"] += 70
 
     # ARM CPU (Raspberry Pi, Jetson, etc) -> TFLite

@@ -32,7 +32,7 @@ basically: the "simplified" folder just finds fuel and sends positions over netw
 - livestream_reader.py — reads frames from a livestream using the Camera class
 - onnx_to_rknn.py — super annoying conversion script that finally made an `.rknn` file (took a while)
 
-## folders (tl;dr)
+## folders
 
 COMPLEX
 - does path planning and plotting along with fuel detection. more features, more slow, more chaos.

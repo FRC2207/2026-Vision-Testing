@@ -2,6 +2,9 @@ import numpy as np
 from .Fuel import Fuel
 from VisionCore.config.VisionCoreConfig import VisionCoreConfig
 
+# 0.3 means the tracked position moves 30% toward each new detectio, smooth but responsive.
+_EMA_ALPHA = 0.3
+
 class FuelTracker:
     def __init__(self, config: VisionCoreConfig):
         self.fuel_list: list[Fuel] = []
@@ -31,12 +34,10 @@ class FuelTracker:
         robot_y: float,
         robot_yaw: float,
     ) -> list[Fuel]:
-        # Age existing fuels and remove expired ones
         for fuel in self.fuel_list:
             fuel.update()
         self.fuel_list = [f for f in self.fuel_list if not f.destroyed]
 
-        # Transform new detections from robot-relative to field-relative
         for fuel in new_fuel_list:
             fuel.relative_to(robot_x, robot_y, robot_yaw)
 
@@ -56,10 +57,10 @@ class FuelTracker:
         for existing in self.fuel_list:
             if np.linalg.norm(new_pos - np.array(existing.get_position())) < self.distance_threshold:
                 existing.reset_time()
-                existing.x = new_fuel.x  # update position to latest detection
-                existing.y = new_fuel.y
+                existing.x = existing.x + _EMA_ALPHA * (new_fuel.x - existing.x)
+                existing.y = existing.y + _EMA_ALPHA * (new_fuel.y - existing.y)
                 return True
         return False
-    
+
     def get_fuel_list(self) -> list[Fuel]:
         return self.fuel_list

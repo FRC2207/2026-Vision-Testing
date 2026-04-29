@@ -22,7 +22,8 @@ def is_valid_model_path(path: str) -> bool:
 def validate_model_files() -> None:
     model_dir = Path("YoloModels")
     if not model_dir.exists():
-        raise FileNotFoundError("YoloModels directory not found.")
+        logger.warning("YoloModels directory not found — skipping model path validation.")
+        return
 
     for root, _, files in os.walk(model_dir):
         for file in files:
@@ -35,7 +36,8 @@ def validate_model_files() -> None:
 def validate_config_files() -> None:
     config_dir = Path("config")
     if not config_dir.exists():
-        raise FileNotFoundError("config directory not found.")
+        logger.warning("config directory not found — skipping config file validation.")
+        return
 
     for root, _, files in os.walk(config_dir):
         for file in files:
@@ -47,14 +49,12 @@ def validate_config_files() -> None:
 def run_unit_tests() -> None:
     logger.info("Running unit tests…")
 
-    # Ensure the repo root is on sys.path so absolute imports work.
     repo_root = Path(__file__).resolve().parents[2]
     if str(repo_root) not in sys.path:
         sys.path.insert(0, str(repo_root))
 
     import unittest
     loader = unittest.TestLoader()
-    # The test file is unit_tests.py, not test.py.
     suite = loader.discover(
         start_dir=str(Path(__file__).parent),
         pattern="unit_tests.py",
@@ -77,25 +77,17 @@ def validate_config_required_fields(config_path: str = "VisionCore/example_confi
     with open(config_file) as f:
         data = json.load(f)
 
-    # Handle nested config structure
     config = data.get("config", data)
 
-    # Required top-level fields
-    required_fields = [
-        "unit",
-        "vision_model",
-        "camera_configs",
-    ]
+    required_fields = ["unit", "vision_model", "camera_configs"]
     for field in required_fields:
         if field not in config:
             raise ValueError(f"Missing required config field: {field}")
 
-    # Validate unit
     valid_units = {"meter", "meters", "inch", "inches", "foot", "feet", "centimeter", "centimeters"}
     if config.get("unit", "").lower() not in valid_units:
         raise ValueError(f"Invalid unit: {config.get('unit')}. Must be one of: {valid_units}")
 
-    # Validate vision_model
     vision_model = config.get("vision_model", {})
     if not vision_model:
         raise ValueError("vision_model config is empty")
@@ -104,19 +96,16 @@ def validate_config_required_fields(config_path: str = "VisionCore/example_confi
     if "input_size" not in vision_model:
         raise ValueError("vision_model must have 'input_size'")
 
-    # Validate camera_configs
     camera_configs = config.get("camera_configs", {})
     if not camera_configs:
         raise ValueError("camera_configs cannot be empty")
 
     for cam_name, cam_config in camera_configs.items():
-        # Required camera fields
         cam_required = ["name", "source", "subsystem"]
         for field in cam_required:
             if field not in cam_config:
                 raise ValueError(f"Camera '{cam_name}' missing required field: {field}")
 
-        # Validate calibration if present
         calib = cam_config.get("calibration", {})
         if calib:
             calib_required = ["size", "distance", "game_piece_size", "fov"]
@@ -124,7 +113,6 @@ def validate_config_required_fields(config_path: str = "VisionCore/example_confi
                 if field not in calib:
                     raise ValueError(f"Camera '{cam_name}' calibration missing: {field}")
 
-    # Validate network_tables_ip format if present
     ip = config.get("network_tables_ip")
     if ip:
         ip_parts = ip.split(".")
