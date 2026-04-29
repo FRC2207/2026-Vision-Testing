@@ -22,7 +22,7 @@
                 "subsystem": "field"
             }
         },
-        "D": {
+        "vision_model": {
             "quantized": false,
             "file_path": "model.pt",
             "input_size": [640, 640]

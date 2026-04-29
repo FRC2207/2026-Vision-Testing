@@ -20,7 +20,7 @@ class VisionCoreConfig:
             "log_level": "INFO",
             "log_file": "Outputs/log.txt",
             "metrics": False,
-            "cameara_matrix": [[0, 0, 0], [0, 0, 0], [0, 0, 0]],
+            "camera_matrix": [[0, 0, 0], [0, 0, 0], [0, 0, 0]],
             "dist_coeffs": [0, 0, 0, 0, 0],
             "camera_configs": {
                 "default": {
@@ -38,9 +38,6 @@ class VisionCoreConfig:
                 "quantized": False,
                 "file_path": "model.pt",
                 "input_size": [640, 640],
-            },
-            "april_tag": {
-                "tag_size": 0.0,
             },
             "auto_opt": True,
         }

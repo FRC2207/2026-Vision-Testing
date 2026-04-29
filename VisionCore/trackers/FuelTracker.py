@@ -14,6 +14,8 @@ class FuelTracker:
             self.logger_warning = False
             self.distance_threshold = float(raw_threshold)
 
+        self.stale_threshold = config.get("stale_threshold") or 1.0
+
         import logging
         self.logger = logging.getLogger(__name__)
         if self.logger_warning:
@@ -44,6 +46,7 @@ class FuelTracker:
     def _merge(self, fuels: list[Fuel]):
         for fuel in fuels:
             if not self._already_exists(fuel):
+                fuel.alive_time = self.stale_threshold
                 self.fuel_list.append(fuel)
 
     def _already_exists(self, new_fuel: Fuel) -> bool:
